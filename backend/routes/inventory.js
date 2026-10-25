@@ -1,0 +1,190 @@
+const express = require("express");
+const router = express.Router();
+const { createClient } = require("@supabase/supabase-js");
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
+
+const { requireAuth } = require("../middleware/auth");
+router.use(requireAuth);
+
+router.use((req, res, next) => {
+  const hotel_id = req.params.hotel_id || req.body.hotel_id;
+
+  if (req.user.role === "hotel_staff" && hotel_id && hotel_id !== req.user.hotel_id) {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied.",
+    });
+  }
+  next();
+});
+
+router.get("/scan/:barcode", async (req, res) => {
+  const { barcode } = req.params;
+  try {
+    const { data: product, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("barcode", barcode)
+      .single();
+
+    if (error || !product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found. Register it first.",
+        barcode,
+      });
+    }
+
+    return res.status(200).json({ success: true, product });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+router.post("/add", async (req, res) => {
+  const { product_id, hotel_id, quantity, unit_cost, supplier } = req.body;
+
+  if (!product_id || !hotel_id || !quantity) {
+    return res.status(400).json({
+      success: false,
+      message: "product_id, hotel_id, and quantity are required.",
+    });
+  }
+
+  try {
+    await supabase.from("purchases").insert({
+      product_id,
+      quantity,
+      unit_cost: unit_cost || 0,
+      total_cost: (unit_cost || 0) * quantity,
+      supplier: supplier || "Not specified",
+      purchased_at: new Date().toISOString(),
+    });
+
+    const { data: existing } = await supabase
+      .from("inventory")
+      .select("*")
+      .eq("product_id", product_id)
+      .eq("hotel_id", hotel_id)
+      .single();
+
+    if (existing) {
+      const { data: updated } = await supabase
+        .from("inventory")
+        .update({
+          quantity_assigned: existing.quantity_assigned + quantity,
+          quantity_remaining: existing.quantity_remaining + quantity,
+          last_updated: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select()
+        .single();
+
+      return res.status(200).json({
+        success: true,
+        message: `Stock increased by ${quantity} units.`,
+        inventory: updated,
+        action: "updated",
+      });
+    } else {
+      const { data: created } = await supabase
+        .from("inventory")
+        .insert({
+          product_id,
+          hotel_id,
+          quantity_assigned: quantity,
+          quantity_sold: 0,
+          quantity_remaining: quantity,
+          last_updated: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      return res.status(201).json({
+        success: true,
+        message: `${quantity} units added to inventory.`,
+        inventory: created,
+        action: "created",
+      });
+    }
+  } catch (err) {
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+router.get("/hotel/:hotel_id", async (req, res) => {
+  const { hotel_id } = req.params;
+  try {
+    const { data: inventory, error } = await supabase
+      .from("inventory")
+      .select("*, products(*), hotels(name)")
+      .eq("hotel_id", hotel_id)
+      .order("last_updated", { ascending: false });
+
+    if (error) throw error;
+
+    return res.status(200).json({ success: true, inventory });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+router.get("/all", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("inventory")
+      .select("*, products(name, sku, image_url), hotels(name)")
+      .order("last_updated", { ascending: false });
+    if (error) throw error;
+    return res.json({ success: true, inventory: data || [] });
+  } catch { return res.status(500).json({ success: false, message: "Server error" }); }
+});
+
+router.put("/:id", async (req, res) => {
+  const { quantity_assigned, quantity_remaining, quantity_sold, reason } = req.body;
+  if (quantity_assigned === undefined || quantity_remaining === undefined || quantity_sold === undefined) {
+    return res.status(400).json({ success: false, message: "All quantity fields are required." });
+  }
+  if (quantity_remaining + quantity_sold !== quantity_assigned) {
+    return res.status(400).json({ success: false, message: "Remaining + sold must equal assigned quantity." });
+  }
+  try {
+    const { data, error } = await supabase
+      .from("inventory")
+      .update({ quantity_assigned, quantity_remaining, quantity_sold, last_updated: new Date().toISOString() })
+      .eq("id", req.params.id)
+      .select("*, products(name), hotels(name)")
+      .single();
+    if (error) throw error;
+    await supabase.from("notifications").insert({
+      message: `Stock corrected — ${data.products?.name} at ${data.hotels?.name}. Reason: ${reason || "Manual correction"}. New stock: ${quantity_remaining} remaining.`,
+      is_read: false,
+      created_at: new Date().toISOString(),
+    });
+    return res.json({ success: true, inventory: data, message: "Inventory updated successfully." });
+  } catch { return res.status(500).json({ success: false, message: "Server error" }); }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const { data: inv } = await supabase
+      .from("inventory")
+      .select("*, products(name), hotels(name)")
+      .eq("id", req.params.id)
+      .single();
+    const { error } = await supabase.from("inventory").delete().eq("id", req.params.id);
+    if (error) throw error;
+    await supabase.from("notifications").insert({
+      message: `Inventory record deleted — ${inv?.products?.name} at ${inv?.hotels?.name}.`,
+      is_read: false,
+      created_at: new Date().toISOString(),
+    });
+    return res.json({ success: true, message: "Inventory record deleted." });
+  } catch { return res.status(500).json({ success: false, message: "Server error" }); }
+});
+
+module.exports = router;

@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#1a1a2e"/>
+  <title>CIMS — Payments</title>
+  <style>
+    html, body {
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    html { min-height: 100%; }
+    body { min-height: 100%; }
+
+    button, input, select, textarea { font: inherit; }
+
+    @supports (-webkit-touch-callout: none) {
+      body { min-height: -webkit-fill-available; }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #1a1a2e;
+      --navy-mid:   #16213e;
+      --navy-light: #1e2a45;
+      --gold:       #fdfbf7;
+      --white:      #f0f0ee;
+      --gold-pale:  rgba(226,185,111,.1);
+      --teal:       #2e7d6e;
+      --coral:      #c0534a;
+      --white:      #ffffff;
+      --text:       #e8e8f4;
+      --muted:      rgba(232,232,244,.5);
+      --border:     rgba(255,255,255,.08);
+      --card-bg:    rgba(255,255,255,.04);
+      --card-hover: rgba(255,255,255,.07);
+      --radius:     14px;
+      --sidebar-w:  240px;
+    }
+
+    html, body { height: 100%; font-family: system-ui, -apple-system, sans-serif; }
+
+    body {
+      background: var(--navy);
+      color: var(--text);
+      display: flex;
+      min-height: 100dvh;
+    }
+
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--navy-mid);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 50;
+      transition: transform .25s ease;
+    }
+
+    .sidebar-logo {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--gold), var(--white));
+      font-size: 15px; font-weight: 700;
+      color: var(--navy); margin-bottom: 10px;
+    }
+    .sidebar-logo h1 { font-size: 16px; font-weight: 700; }
+    .sidebar-logo p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+
+    .nav-label {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: var(--muted); padding: 12px 10px 6px;
+    }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 9px;
+      font-size: 14px; font-weight: 500;
+      color: var(--muted); cursor: pointer;
+      transition: all .15s; border: none;
+      background: none; width: 100%; text-align: left;
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-item:hover  { background: var(--card-bg); color: var(--text); }
+    .nav-item.active { background: var(--gold-pale); color: var(--gold); font-weight: 600; }
+    .nav-item .icon  { width: 20px; text-align: center; flex-shrink: 0; font-style: normal; }
+
+    .sidebar-footer { padding: 16px 10px; border-top: 1px solid var(--border); }
+    .user-pill {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 9px; background: var(--card-bg);
+    }
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), var(--white));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: var(--navy); flex-shrink: 0;
+    }
+    .user-info .name { font-size: 13px; font-weight: 600; }
+    .user-info .role { font-size: 11px; color: var(--muted); }
+    .logout-btn {
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; font-size: 14px; padding: 4px;
+      transition: color .15s; flex-shrink: 0; margin-left: auto;
+    }
+    .logout-btn:hover { color: var(--coral); }
+
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.6); z-index: 40;
+    }
+    .sidebar-overlay.visible { display: block; }
+
+    .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100dvh; }
+
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 24px; border-bottom: 1px solid var(--border);
+      background: rgba(26,26,46,.8); backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 30;
+    }
+    .topbar-menu {
+      display: none; background: none; border: none;
+      color: var(--text); font-size: 20px; cursor: pointer; padding: 4px;
+    }
+    .topbar-title { font-size: 16px; font-weight: 600; flex: 1; }
+
+    .btn-primary {
+      padding: 10px 18px; border: none; border-radius: 9px;
+      background: linear-gradient(135deg, var(--gold), var(--white));
+      color: var(--navy); font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: opacity .15s, transform .1s;
+      -webkit-tap-highlight-color: transparent; white-space: nowrap;
+    }
+    .btn-primary:hover  { opacity: .9; }
+    .btn-primary:active { transform: scale(.97); }
+
+    .content { padding: 24px; flex: 1; }
+
+    .page-header { margin-bottom: 20px; }
+    .page-header h2 { font-size: 22px; font-weight: 700; }
+    .page-header p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px; margin-bottom: 20px;
+    }
+    .stat-mini {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px;
+      position: relative; overflow: hidden;
+    }
+    .stat-mini::before {
+      content: ""; position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+    }
+    .stat-mini.gold::before   { background: linear-gradient(90deg, var(--gold), transparent); }
+    .stat-mini.teal::before   { background: linear-gradient(90deg, #4db89e, transparent); }
+    .stat-mini.coral::before  { background: linear-gradient(90deg, #e07b73, transparent); }
+    .stat-mini.purple::before { background: linear-gradient(90deg, #a29bf0, transparent); }
+    .stat-mini-val   { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .stat-mini.gold   .stat-mini-val { color: var(--gold); }
+    .stat-mini.teal   .stat-mini-val { color: #4db89e; }
+    .stat-mini.coral  .stat-mini-val { color: #e07b73; }
+    .stat-mini.purple .stat-mini-val { color: #a29bf0; }
+    .stat-mini-lbl { font-size: 11px; color: var(--muted); font-weight: 500; }
+
+    .toolbar {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .search-wrap { position: relative; flex: 1; min-width: 200px; }
+    .search-wrap input {
+      width: 100%; padding: 10px 14px 10px 36px;
+      background: var(--card-bg); border: 1.5px solid var(--border);
+      border-radius: 9px; color: var(--text); font-size: 14px; outline: none;
+      transition: border-color .15s;
+    }
+    .search-wrap input:focus { border-color: var(--gold); }
+    .search-wrap input::placeholder { color: var(--muted); }
+    .search-icon {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%); color: var(--muted); font-size: 14px;
+    }
+
+    .filter-select {
+      padding: 10px 14px; background: var(--card-bg);
+      border: 1.5px solid var(--border); border-radius: 9px;
+      color: var(--text); font-size: 13px; outline: none;
+      cursor: pointer;
+    }
+    .filter-select:focus { border-color: var(--gold); }
+
+    .pay-table-wrap {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+
+    .pay-table { width: 100%; border-collapse: collapse; }
+    .pay-table th {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .5px;
+      padding: 12px 20px; text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .pay-table td {
+      padding: 14px 20px; font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      vertical-align: middle;
+    }
+    .pay-table tr:last-child td { border-bottom: none; }
+    .pay-table tr:hover td { background: var(--card-hover); }
+
+    .hotel-name-cell { font-weight: 600; font-size: 14px; }
+    .hotel-contact   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+    }
+    .status-pill.active   { background: rgba(77,184,158,.15); color: #4db89e; }
+    .status-pill.inactive { background: rgba(192,83,74,.15);  color: #e07b73; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    .dues-cell { font-weight: 600; color: #e07b73; }
+    .dues-cell.clear { color: #4db89e; }
+
+    .action-btns { display: flex; align-items: center; gap: 6px; }
+    .action-btn {
+      padding: 6px 12px; border-radius: 7px; font-size: 12px;
+      font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+      background: var(--card-bg); color: var(--muted);
+      transition: all .15s; -webkit-tap-highlight-color: transparent;
+    }
+    .action-btn:hover          { background: var(--card-hover); color: var(--text); }
+    .action-btn.view           { color: var(--gold); border-color: rgba(226,185,111,.2); }
+    .action-btn.view:hover     { background: var(--gold-pale); }
+    .action-btn.edit           { color: #a29bf0; border-color: rgba(162,155,240,.2); }
+    .action-btn.edit:hover     { background: rgba(162,155,240,.1); }
+    .action-btn.deactivate     { color: #e07b73; border-color: rgba(224,123,115,.2); }
+    .action-btn.deactivate:hover { background: rgba(224,123,115,.1); }
+    .action-btn.activate       { color: #4db89e; border-color: rgba(77,184,158,.2); }
+    .action-btn.activate:hover { background: rgba(77,184,158,.1); }
+    .action-btn.delete         { color: #e07b73; border-color: rgba(224,123,115,.2); }
+    .action-btn.delete:hover   { background: rgba(224,123,115,.15); }
+
+    .empty-state {
+      padding: 60px 24px; text-align: center; color: var(--muted);
+    }
+    .empty-state p { font-size: 14px; margin-bottom: 16px; }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.7); z-index: 100;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.visible { display: flex; }
+
+    .modal {
+      background: var(--navy-mid); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px 24px;
+      width: 100%; max-width: 480px;
+      animation: fadeUp .2s ease;
+      max-height: 90dvh; overflow-y: auto;
+    }
+    @keyframes fadeUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: .5px; margin-bottom: 6px;
+    }
+    .field input, .field select {
+      width: 100%; padding: 11px 14px;
+      background: rgba(255,255,255,.06); border: 1.5px solid var(--border);
+      border-radius: 9px; color: var(--text); font-size: 14px; outline: none;
+      transition: border-color .15s; 
+    }
+    .field input:focus, .field select:focus { border-color: var(--gold); }
+    .field input::placeholder { color: var(--muted); }
+    .field select option { background: var(--navy-mid); }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .modal-btn {
+      flex: 1; padding: 12px; border: none; border-radius: 9px;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    .modal-btn:active   { transform: scale(.97); }
+    .modal-btn.confirm  { background: linear-gradient(135deg, var(--gold), var(--white)); color: var(--navy); }
+    .modal-btn.cancel   { background: var(--card-bg); color: var(--muted); border: 1px solid var(--border); }
+    .modal-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .modal-err {
+      padding: 10px 14px; border-radius: 8px; font-size: 13px;
+      font-weight: 500; margin-bottom: 14px; display: none;
+      background: rgba(192,83,74,.15); color: #e07b73;
+      border: 1px solid rgba(192,83,74,.3);
+    }
+    .modal-err.visible { display: block; }
+
+    .confirm-modal-text {
+      font-size: 14px; color: var(--muted); margin-bottom: 20px; line-height: 1.6;
+    }
+    .confirm-modal-text strong { color: var(--text); }
+
+    .detail-modal { max-width: 560px; }
+    .detail-section { margin-bottom: 20px; }
+    .detail-section h4 {
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px;
+    }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .detail-item { background: var(--navy-light); border-radius: 8px; padding: 12px 14px; }
+    .detail-item-lbl { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .detail-item-val { font-size: 14px; font-weight: 600; }
+
+    .inv-list { background: var(--navy-light); border-radius: 8px; overflow: hidden; }
+    .inv-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .inv-row:last-child { border-bottom: none; }
+    .btn-paid {
+      background: rgba(77,184,158,.15); color: #4db89e;
+      border: 1px solid rgba(77,184,158,.35); border-radius: 6px;
+      padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+      font-family: inherit; margin-left: 8px;
+    }
+    .btn-paid:hover { background: rgba(77,184,158,.25); }
+    .btn-paid:disabled { opacity: .5; cursor: default; }
+    .pay-status { font-size: 10px; text-transform: uppercase; color: var(--muted); margin-left: 8px; margin-right: 10px; }
+    .inv-stock { font-weight: 600; color: #4db89e; }
+    .inv-stock.low { color: #e07b73; }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--navy-light); border: 1px solid var(--border);
+      border-left: 3px solid var(--gold); border-radius: 10px;
+      padding: 12px 16px; font-size: 13px; font-weight: 500;
+      z-index: 200; transform: translateY(80px); opacity: 0;
+      transition: all .3s cubic-bezier(.4,0,.2,1); max-width: 300px;
+    }
+    .toast.visible { transform: translateY(0); opacity: 1; }
+    .toast.error   { border-left-color: #e07b73; }
+    .toast.success { border-left-color: #4db89e; }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .topbar-menu { display: block; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .content { padding: 16px; }
+      .field-row { grid-template-columns: 1fr; }
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 480px) {
+      .stats-row { grid-template-columns: 1fr 1fr; }
+
+      .action-btns { flex-wrap: wrap; gap: 4px; }
+      .action-btn  { padding: 5px 8px; font-size: 11px; }
+
+      .toolbar { flex-direction: column; }
+      .search-wrap { width: 100%; }
+      .filter-select { width: 100%; }
+    }
+    @media (max-width: 480px) {
+      .content { padding: 12px; }
+
+      .topbar  { padding: 12px 14px; }
+
+      .modal   { padding: 20px 16px; margin: 0 8px; }
+
+      table    { font-size: 12px; }
+      table th,
+      table td { padding: 10px 12px; }
+    }
+  
+    /* mobile width fix: stop the table from stretching the page */
+    .main { min-width: 0; }
+    .pay-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    @media (max-width: 480px) {
+      .pay-table th, .pay-table td { padding: 10px 8px; }
+    }
+
+    /* ---- payments page ---- */
+    .status-pill.pending { background: rgba(162,155,240,.15); color: #a29bf0; }
+    .status-pill.partial { background: rgba(226,185,111,.15); color: #e2b96f; }
+    .status-pill.overdue { background: rgba(192,83,74,.15);  color: #e07b73; }
+    .status-pill.paid    { background: rgba(77,184,158,.15); color: #4db89e; }
+    .amount-cell { font-weight: 700; white-space: nowrap; }
+    .amount-cell.paid { color: #4db89e; }
+    .amount-cell.open { color: #e07b73; }
+    .pay-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .action-btn.paid   { color: #4db89e; border-color: rgba(77,184,158,.3); }
+    .action-btn.paid:hover { background: rgba(77,184,158,.12); }
+    .action-btn.reopen { color: #a29bf0; border-color: rgba(162,155,240,.2); }
+    .action-btn.reopen:hover { background: rgba(162,155,240,.1); }
+    .empty-row { padding: 50px 20px !important; text-align: center; color: var(--muted); }
+
+    @media (max-width: 480px) {
+      .pay-table th, .pay-table td { padding: 10px 6px; }
+      .pay-table th:first-child, .pay-table td:first-child { padding-left: 12px; }
+      .pay-table .status-dot { display: none; }
+      .pay-table .status-pill { padding: 3px 8px; font-size: 10px; }
+      .pay-table .action-btns { flex-direction: column; align-items: stretch; gap: 4px; }
+      .pay-table .action-btn { padding: 5px 6px; text-align: center; }
+    }
+  
+    @media (max-width: 380px) {
+      .pay-table th, .pay-table td { padding: 10px 4px; }
+      .pay-table .hotel-name-cell { font-size: 13px; }
+      .pay-table .amount-cell { font-size: 12px; }
+      .pay-table th { letter-spacing: 0; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="mark">C</div>
+    <h1>CIMS</h1>
+    <p>Admin Dashboard</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">Overview</div>
+    <a class="nav-item" href="admin.html"><i class="icon">&#9679;</i> Dashboard</a>
+    <div class="nav-label">Inventory</div>
+    <a class="nav-item" href="index.html"><i class="icon">&#9679;</i> Add Stock</a>
+    <div class="nav-label">Business</div>
+    <a class="nav-item" href="hotels.html"><i class="icon">&#9679;</i> Hotels</a>
+    <a class="nav-item active" href="payment.html"><i class="icon">&#9679;</i> Payments</a>
+    <a class="nav-item" href="sales.html"><i class="icon">&#9679;</i> Sales</a>
+    <a class="nav-item" href="staff.html"><i class="icon">&#9679;</i> Staff</a>
+    <a class="nav-item" href="products.html"><i class="icon">&#9679;</i> Products</a>
+    <a class="nav-item" href="reports.html"><i class="icon">&#9679;</i> Reports</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="user-avatar" id="user-avatar">A</div>
+      <div class="user-info">
+        <div class="name" id="user-name">Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+      <button class="logout-btn" onclick="logout()">&#8618;</button>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <button class="topbar-menu" onclick="openSidebar()">&#9776;</button>
+    <div class="topbar-title">Payments</div>
+    <button class="btn-primary" onclick="openAddModal()">+ Add due</button>
+  </div>
+
+  <div class="content">
+
+    <div class="page-header">
+      <h2>Payments</h2>
+      <p>Track what each hotel owes you — add dues and mark them as paid.</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-mini purple">
+        <div class="stat-mini-val" id="stat-outstanding">—</div>
+        <div class="stat-mini-lbl">Outstanding</div>
+      </div>
+      <div class="stat-mini coral">
+        <div class="stat-mini-val" id="stat-overdue">—</div>
+        <div class="stat-mini-lbl">Overdue</div>
+      </div>
+      <div class="stat-mini teal">
+        <div class="stat-mini-val" id="stat-paid">—</div>
+        <div class="stat-mini-lbl">Collected</div>
+      </div>
+      <div class="stat-mini gold">
+        <div class="stat-mini-val" id="stat-open">—</div>
+        <div class="stat-mini-lbl">Open dues</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">&#9906;</span>
+        <input type="text" id="search-input" placeholder="Search hotel or note..." oninput="applyFilters()"/>
+      </div>
+      <select class="filter-select" id="status-filter" onchange="applyFilters()">
+        <option value="open">Open dues</option>
+        <option value="overdue">Overdue</option>
+        <option value="paid">Paid</option>
+        <option value="">All</option>
+      </select>
+      <select class="filter-select" id="hotel-filter" onchange="applyFilters()">
+        <option value="">All hotels</option>
+      </select>
+    </div>
+
+    <div class="hotels-table-wrap">
+      <table class="pay-table">
+        <thead>
+          <tr>
+            <th>Hotel</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="pay-tbody">
+          <tr><td colspan="4" class="empty-row">Loading payments...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-title">Add due</div>
+    <div class="modal-err" id="modal-err"></div>
+
+    <div class="field">
+      <label>Hotel</label>
+      <select id="f-hotel"><option value="">Select hotel...</option></select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Amount (&#8377;)</label>
+        <input type="number" id="f-amount" min="1" step="0.01" inputmode="decimal" placeholder="e.g. 5000"/>
+      </div>
+      <div class="field">
+        <label>Due date</label>
+        <input type="date" id="f-due"/>
+      </div>
+    </div>
+    <div class="field">
+      <label>Note (optional)</label>
+      <input type="text" id="f-notes" maxlength="200" placeholder="e.g. Invoice #1042"/>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeAddModal()">Cancel</button>
+      <button class="modal-btn confirm" id="btn-save" onclick="saveDue()">Add due</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <div class="modal-title">Delete payment</div>
+    <div class="confirm-modal-text" id="delete-text"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeDeleteModal()">Cancel</button>
+      <button class="modal-btn confirm" id="btn-confirm-delete"
+        style="background:linear-gradient(135deg,#c0534a,#9e3d35)"
+        onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API     = "https://cims-ss3i.onrender.com/api";
+  const token   = localStorage.getItem("cims_token");
+  const user    = JSON.parse(localStorage.getItem("cims_user") || "{}");
+  const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
+
+  let allPayments = [];
+  let deletingId  = null;
+  let toastTimer;
+
+  if (!token || !user || user.role !== "admin") {
+    window.location.href = "login.html";
+  }
+
+  window.addEventListener("load", () => {
+    document.getElementById("user-name").textContent   = user.name || "Admin";
+    document.getElementById("user-avatar").textContent = (user.name || "A").charAt(0).toUpperCase();
+    loadPayments();
+  });
+
+  // ---------- helpers ----------
+  function esc(v) {
+    return String(v ?? "").replace(/[&<>"']/g, c => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function money(n) { return "\u20B9" + Number(n || 0).toLocaleString("en-IN"); }
+  function todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  function fmtDate(s) {
+    if (!s) return "";
+    const [y, m, d] = String(s).slice(0, 10).split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  }
+  // pending/partial rows whose due date has passed count as overdue
+  function effStatus(p) {
+    const st = String(p.status || "pending").toLowerCase();
+    if (st === "paid") return "paid";
+    if (st === "overdue") return "overdue";
+    if (p.due_date && String(p.due_date).slice(0, 10) < todayStr()) return "overdue";
+    return st;
+  }
+
+  // ---------- load ----------
+  async function loadPayments() {
+    try {
+      const res  = await fetch(`${API}/payments`, { headers });
+      const data = await res.json();
+      if (!data.success) {
+        showToast(data.message || "Could not load payments", "error");
+        document.getElementById("pay-tbody").innerHTML =
+          `<tr><td colspan="4" class="empty-row">Could not load payments.</td></tr>`;
+        return;
+      }
+      allPayments = data.payments || [];
+      fillHotelFilter();
+      renderStats();
+      applyFilters();
+    } catch {
+      showToast("Cannot connect to server", "error");
+      document.getElementById("pay-tbody").innerHTML =
+        `<tr><td colspan="4" class="empty-row">Cannot connect to server.</td></tr>`;
+    }
+  }
+
+  function fillHotelFilter() {
+    const sel  = document.getElementById("hotel-filter");
+    const keep = sel.value;
+    const seen = new Map();
+    allPayments.forEach(p => seen.set(p.hotel_id, p.hotel_name));
+    sel.innerHTML = `<option value="">All hotels</option>` +
+      [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]))
+        .map(([id, name]) => `<option value="${esc(id)}">${esc(name)}</option>`).join("");
+    sel.value = keep;
+  }
+
+  function renderStats() {
+    let outstanding = 0, overdue = 0, paid = 0, open = 0;
+    allPayments.forEach(p => {
+      const st = effStatus(p), amt = Number(p.amount) || 0;
+      if (st === "paid") { paid += amt; return; }
+      outstanding += amt; open++;
+      if (st === "overdue") overdue += amt;
+    });
+    document.getElementById("stat-outstanding").textContent = money(outstanding);
+    document.getElementById("stat-overdue").textContent     = money(overdue);
+    document.getElementById("stat-paid").textContent        = money(paid);
+    document.getElementById("stat-open").textContent        = open;
+  }
+
+  // ---------- list ----------
+  function applyFilters() {
+    const q      = document.getElementById("search-input").value.trim().toLowerCase();
+    const status = document.getElementById("status-filter").value;
+    const hotel  = document.getElementById("hotel-filter").value;
+
+    const rank = { overdue: 0, pending: 1, partial: 1, paid: 2 };
+    const list = allPayments.filter(p => {
+      const st = effStatus(p);
+      if (status === "open"    && st === "paid")    return false;
+      if (status === "overdue" && st !== "overdue") return false;
+      if (status === "paid"    && st !== "paid")    return false;
+      if (hotel && p.hotel_id !== hotel)            return false;
+      if (q && !`${p.hotel_name} ${p.notes || ""}`.toLowerCase().includes(q)) return false;
+      return true;
+    }).sort((a, b) => {
+      const ra = rank[effStatus(a)] ?? 1, rb = rank[effStatus(b)] ?? 1;
+      if (ra !== rb) return ra - rb;
+      return String(a.due_date || "9999").localeCompare(String(b.due_date || "9999"));
+    });
+
+    renderTable(list);
+  }
+
+  function renderTable(list) {
+    const tbody = document.getElementById("pay-tbody");
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="4" class="empty-row">No payments found.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = list.map(p => {
+      const st   = effStatus(p);
+      const open = st !== "paid";
+      const sub  = [p.notes, p.due_date ? `Due ${fmtDate(p.due_date)}` : ""].filter(Boolean).map(esc).join(" · ");
+      return `
+        <tr>
+          <td>
+            <div class="hotel-name-cell">${esc(p.hotel_name)}</div>
+            ${sub ? `<div class="pay-sub">${sub}</div>` : ""}
+          </td>
+          <td class="amount-cell ${open ? "open" : "paid"}">${money(p.amount)}</td>
+          <td><span class="status-pill ${esc(st)}"><span class="status-dot"></span>${esc(st)}</span></td>
+          <td>
+            <div class="action-btns">
+              ${open
+                ? `<button class="action-btn paid" onclick="setStatus('${esc(p.id)}','paid',this)">Mark paid</button>`
+                : `<button class="action-btn reopen" onclick="setStatus('${esc(p.id)}','pending',this)">Reopen</button>`}
+              <button class="action-btn delete" onclick="openDeleteModal('${esc(p.id)}')">Delete</button>
+            </div>
+          </td>
+        </tr>`;
+    }).join("");
+  }
+
+  // ---------- mark paid / reopen ----------
+  async function setStatus(id, status, btn) {
+    btn.disabled = true;
+    try {
+      const res  = await fetch(`${API}/payments/${id}`, {
+        method: "PUT", headers, body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(status === "paid" ? "Marked as paid" : "Payment reopened", "success");
+        await loadPayments();
+      } else {
+        showToast(data.message || "Could not update payment", "error");
+        btn.disabled = false;
+      }
+    } catch {
+      showToast("Cannot connect to server", "error");
+      btn.disabled = false;
+    }
+  }
+
+  // ---------- add due ----------
+  async function openAddModal() {
+    document.getElementById("modal-err").classList.remove("visible");
+    document.getElementById("f-amount").value = "";
+    document.getElementById("f-due").value    = "";
+    document.getElementById("f-notes").value  = "";
+
+    const sel = document.getElementById("f-hotel");
+    sel.innerHTML = `<option value="">Loading hotels...</option>`;
+    document.getElementById("add-modal").classList.add("visible");
+
+    try {
+      const res  = await fetch(`${API}/hotels`, { headers });
+      const data = await res.json();
+      const hotels = (data.hotels || []).filter(h => h.status !== "inactive");
+      sel.innerHTML = `<option value="">Select hotel...</option>` +
+        hotels.map(h => `<option value="${esc(h.id)}">${esc(h.name)}</option>`).join("");
+    } catch {
+      sel.innerHTML = `<option value="">Could not load hotels</option>`;
+    }
+  }
+  function closeAddModal() { document.getElementById("add-modal").classList.remove("visible"); }
+
+  function showModalErr(msg) {
+    const el = document.getElementById("modal-err");
+    el.textContent = msg; el.classList.add("visible");
+  }
+
+  async function saveDue() {
+    const hotel_id = document.getElementById("f-hotel").value;
+    const amount   = parseFloat(document.getElementById("f-amount").value);
+    const due_date = document.getElementById("f-due").value;
+    const notes    = document.getElementById("f-notes").value.trim();
+
+    if (!hotel_id)                       return showModalErr("Please select a hotel.");
+    if (!(amount > 0))                   return showModalErr("Enter an amount greater than 0.");
+
+    const btn = document.getElementById("btn-save");
+    btn.disabled = true; btn.textContent = "Saving...";
+    try {
+      const res  = await fetch(`${API}/payments`, {
+        method: "POST", headers,
+        body: JSON.stringify({ hotel_id, amount, due_date: due_date || null, notes }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        closeAddModal();
+        showToast("Due added", "success");
+        await loadPayments();
+      } else {
+        showModalErr(data.message || "Could not add due.");
+      }
+    } catch {
+      showModalErr("Cannot connect to server.");
+    } finally {
+      btn.disabled = false; btn.textContent = "Add due";
+    }
+  }
+
+  // ---------- delete ----------
+  function openDeleteModal(id) {
+    const p = allPayments.find(x => x.id === id);
+    if (!p) return;
+    deletingId = id;
+    document.getElementById("delete-text").innerHTML =
+      `Delete the ${esc(money(p.amount))} payment for <strong>${esc(p.hotel_name)}</strong>? This cannot be undone.`;
+    document.getElementById("delete-modal").classList.add("visible");
+  }
+  function closeDeleteModal() {
+    document.getElementById("delete-modal").classList.remove("visible");
+    deletingId = null;
+  }
+  async function confirmDelete() {
+    if (!deletingId) return;
+    const btn = document.getElementById("btn-confirm-delete");
+    btn.disabled = true;
+    try {
+      const res  = await fetch(`${API}/payments/${deletingId}`, { method: "DELETE", headers });
+      const data = await res.json();
+      if (data.success) {
+        closeDeleteModal();
+        showToast("Payment deleted", "success");
+        await loadPayments();
+      } else {
+        showToast(data.message || "Could not delete payment", "error");
+      }
+    } catch {
+      showToast("Cannot connect to server", "error");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ---------- shell ----------
+  function openSidebar()  {
+    document.getElementById("sidebar").classList.add("open");
+    document.getElementById("sidebar-overlay").classList.add("visible");
+  }
+  function closeSidebar() {
+    document.getElementById("sidebar").classList.remove("open");
+    document.getElementById("sidebar-overlay").classList.remove("visible");
+  }
+  function logout() {
+    localStorage.removeItem("cims_token");
+    localStorage.removeItem("cims_user");
+    localStorage.removeItem("cims_role");
+    window.location.href = "login.html";
+  }
+  function showToast(msg, type = "") {
+    const el = document.getElementById("toast");
+    el.textContent = msg; el.className = `toast visible ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("visible"), 3000);
+  }
+</script>
+<script src="sanitize.js"></script>
+<script src="timeout.js"></script>
+</body>
+</html>

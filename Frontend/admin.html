@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#1a1a2e"/>
+  <title>CIMS — Admin Dashboard</title>
+  <style>
+    html, body {
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    html { min-height: 100%; }
+    body { min-height: 100%; }
+
+    button, input, select, textarea { font: inherit; }
+
+    @supports (-webkit-touch-callout: none) {
+      body { min-height: -webkit-fill-available; }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #1a1a2e;
+      --navy-mid:   #16213e;
+      --navy-light: #1e2a45;
+      --gold:       #edece9;
+      --gold-dk:    rgb(239, 238, 234);
+      --gold-pale:  rgba(226,185,111,.1);
+      --teal:       #2e7d6e;
+      --coral:      #c0534a;
+      --purple:     #6c5ce7;
+      --white:      #ffffff;
+      --green:      #32f65f;
+      --text:       #e8e8f4;
+      --muted:      rgba(232,232,244,.5);
+      --border:     rgba(255,255,255,.08);
+      --card-bg:    rgba(255,255,255,.04);
+      --card-hover: rgba(255,255,255,.07);
+      --radius:     14px;
+      --sidebar-w:  240px;
+    }
+
+    html, body { height: 100%; font-family: system-ui, -apple-system, sans-serif; }
+
+    body {
+      background: var(--navy);
+      color: var(--text);
+      display: flex;
+      min-height: 100dvh;
+    }
+
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--navy-mid);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 50;
+      transition: transform .25s ease;
+    }
+
+    .sidebar-logo {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dk));
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    .sidebar-logo h1 { font-size: 16px; font-weight: 700; letter-spacing: -.2px; }
+    .sidebar-logo p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+
+    .nav-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 12px 10px 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .15s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-item:hover  { background: var(--card-bg); color: var(--text); }
+    .nav-item.active { background: var(--gold-pale); color: var(--gold); font-weight: 600; }
+    .nav-item .icon  { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+
+    .nav-badge {
+      margin-left: auto;
+      background: var(--coral);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 20px;
+      min-width: 18px;
+      text-align: center;
+    }
+
+    .sidebar-footer {
+      padding: 16px 10px;
+      border-top: 1px solid var(--border);
+    }
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 9px;
+      background: var(--card-bg);
+    }
+    .user-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dk));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--navy);
+      flex-shrink: 0;
+    }
+    .user-info { flex: 1; min-width: 0; }
+    .user-info .name  { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-info .role  { font-size: 11px; color: var(--muted); }
+    .logout-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px;
+      transition: color .15s;
+      flex-shrink: 0;
+    }
+    .logout-btn:hover { color: var(--coral); }
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 40;
+    }
+    .sidebar-overlay.visible { display: block; }
+
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(26,26,46,.8);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+    .topbar-menu {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .topbar-title { font-size: 16px; font-weight: 600; flex: 1; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+    .notif-btn {
+      position: relative;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 16px;
+      transition: background .15s;
+    }
+    .notif-btn:hover { background: var(--card-hover); }
+    .notif-dot {
+      position: absolute;
+      top: 6px; right: 6px;
+      width: 8px; height: 8px;
+      background: var(--coral);
+      border-radius: 50%;
+      border: 2px solid var(--navy);
+    }
+
+    .refresh-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .15s;
+    }
+    .refresh-btn:hover { background: var(--card-hover); color: var(--text); }
+
+    .content { padding: 24px; flex: 1; }
+
+    .page-header { margin-bottom: 24px; }
+    .page-header h2 { font-size: 22px; font-weight: 700; }
+    .page-header p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: background .15s;
+    }
+    .stat-card:hover { background: var(--card-hover); }
+    .stat-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .stat-card.gold::before   { background: linear-gradient(90deg, var(--gold), transparent); }
+    .stat-card.teal::before   { background: linear-gradient(90deg, #2e7d6e, transparent); }
+    .stat-card.coral::before  { background: linear-gradient(90deg, var(--coral), transparent); }
+    .stat-card.purple::before { background: linear-gradient(90deg, var(--purple), transparent); }
+
+    .stat-icon {
+      font-size: 22px;
+      margin-bottom: 12px;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-card.gold   .stat-value { color: var(--gold); }
+    .stat-card.teal   .stat-value { color: #4db89e; }
+    .stat-card.coral  .stat-value { color: #e07b73; }
+    .stat-card.purple .stat-value { color: #a29bf0; }
+
+    .stat-label { font-size: 12px; color: var(--muted); font-weight: 500; }
+    .stat-delta {
+      font-size: 11px;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .stat-delta.up   { color: #4db89e; }
+    .stat-delta.down { color: #e07b73; }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-head h3 { font-size: 14px; font-weight: 600; }
+    .section-head .see-all {
+      font-size: 12px;
+      color: var(--gold);
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-weight: 500;
+    }
+
+    .sales-table { width: 100%; border-collapse: collapse; }
+    .sales-table th {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 10px 20px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .sales-table td {
+      padding: 13px 20px;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+    }
+    .sales-table tr:last-child td { border-bottom: none; }
+    .sales-table tr:hover td { background: var(--card-hover); }
+
+    .product-cell { display: flex; align-items: center; gap: 10px; }
+    .product-thumb {
+      width: 32px; height: 32px;
+      border-radius: 7px;
+      background: var(--gold-pale);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .product-name  { font-weight: 500; font-size: 13px; }
+    .product-hotel { font-size: 11px; color: var(--muted); }
+
+    .amount-cell { font-weight: 600; color: #4db89e; }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .status-pill.paid    { background: rgba(77,184,158,.15); color: #4db89e; }
+    .status-pill.pending { background: rgba(226,185,111,.15); color: var(--gold); }
+    .status-pill.overdue { background: rgba(192,83,74,.15);  color: #e07b73; }
+
+    .notif-feed { max-height: 420px; overflow-y: auto; }
+    .notif-item {
+      display: flex;
+      gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      transition: background .15s;
+    }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-item:hover      { background: var(--card-hover); }
+    .notif-item.unread     { background: rgba(226,185,111,.04); }
+    .notif-dot-indicator {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--gold);
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+    .notif-dot-indicator.read { background: transparent; border: 1px solid var(--border); }
+    .notif-text { font-size: 13px; line-height: 1.4; }
+    .notif-time { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    .hotels-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 16px;
+    }
+    .hotel-card {
+      background: var(--navy-light);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      transition: background .15s;
+      cursor: pointer;
+    }
+    .hotel-card:hover { background: rgba(255,255,255,.07); }
+    .hotel-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .hotel-name { font-size: 13px; font-weight: 600; }
+    .hotel-status {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4db89e;
+      flex-shrink: 0;
+    }
+    .hotel-stat-row {
+      display: flex;
+      justify-content: space-between;
+    }
+    .hotel-stat { text-align: center; }
+    .hotel-stat-val  { font-size: 15px; font-weight: 700; color: var(--gold); }
+    .hotel-stat-lbl  { font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .qa-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all .15s;
+      color: var(--text);
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .qa-btn:hover { background: var(--gold-pale); border-color: rgba(226,185,111,.3); }
+    .qa-btn .qa-icon { font-size: 22px; }
+    .qa-btn .qa-label { font-size: 12px; font-weight: 500; color: var(--muted); text-align: center; }
+
+    .loading-row td {
+      text-align: center;
+      color: var(--muted);
+      padding: 32px;
+      font-size: 13px;
+    }
+
+    @media (max-width: 1100px) {
+      .two-col { grid-template-columns: 1fr; }
+      .hotels-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .topbar-menu { display: block; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .quick-actions { grid-template-columns: repeat(2, 1fr); }
+      .hotels-grid { grid-template-columns: 1fr; }
+      .content { padding: 16px; }
+    }
+
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .stat-value { font-size: 22px; }
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      background: var(--navy-light);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--gold);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 200;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all .3s cubic-bezier(.4,0,.2,1);
+      max-width: 300px;
+    }
+    .toast.visible { transform: translateY(0); opacity: 1; }
+    .toast.sale { border-left-color: #4db89e; }
+    @media (max-width: 480px) {
+      .content { padding: 12px; }
+
+      .topbar  { padding: 12px 14px; }
+
+      .modal   { padding: 20px 16px; margin: 0 8px; }
+
+      table    { font-size: 12px; }
+      table th,
+      table td { padding: 10px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="mark">📦</div>
+    <h1>CIMS</h1>
+    <p>Admin Dashboard</p>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-label">Overview</div>
+    <button class="nav-item active" onclick="setPage('dashboard')">
+      <i class="icon">&#9679;</i>
+       Dashboard
+    </button>
+    <button class="nav-item" onclick="setPage('notifications')">
+      <i class="icon">&#9679;</i>
+       Notifications
+      <span class="nav-badge" id="notif-badge">0</span>
+    </button>
+
+    <div class="nav-label">Inventory</div>
+    <button class="nav-item" onclick="window.location.href='index.html'">
+      <i class="icon">&#9679;</i>
+       Add Stock
+    </button>
+    <a class="nav-item" href="products.html"><i class="icon">&#9679;</i>Products</a>
+  
+    <a class="nav-item" href="inventory.html"><i class="icon">&#9679;</i> Inventory</a>
+
+    <div class="nav-label">Business</div>
+    <a class="nav-item" href="hotels.html"><i class="icon">&#9679;</i>Hotels</a>
+    <a class="nav-item" href="payment.html"><i class="icon">&#9679;</i>Payments</a>
+    <button class="nav-item" onclick="setPage('sales')">
+      <i class="icon">&#9679;</i>
+       Sales
+    </button>
+
+    <div class="nav-label">Account</div>
+    <a class="nav-item" href="staff.html"><i class="icon">&#9679;</i> Hotel Staff</a>
+   <a class="nav-item" href="reports.html"><i class="icon">&#9679;</i>Reports</a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="user-avatar" id="user-avatar">A</div>
+      <div class="user-info">
+        <div class="name" id="user-name">Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="Logout">↪</button>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+
+  <div class="topbar">
+    <button class="topbar-menu" onclick="openSidebar()">☰</button>
+    <div class="topbar-title" id="topbar-title">Dashboard</div>
+    <div class="topbar-right">
+      <button class="refresh-btn" onclick="loadDashboard()">↻ Refresh</button>
+      <button class="notif-btn" onclick="setPage('notifications')">
+        🔔
+        <div class="notif-dot" id="notif-dot" style="display:none"></div>
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="page-header">
+      <h2 id="page-title">Good morning </h2>
+      <p id="page-sub">Here's what's happening across your hotels today.</p>
+    </div>
+
+    <div class="quick-actions">
+      <a class="qa-btn" href="index.html">
+        <span class="qa-icon">📷</span>
+        <span class="qa-label">Scan &amp; Add Stock</span>
+      </a>
+      <a href="hotels.html" class="qa-btn" onclick="setPage('hotels')">
+        <span class="qa-icon">🏨</span>
+        <span class="qa-label">Manage Hotels</span>
+      </a>
+      <button class="qa-btn" onclick="setPage('payments')">
+        <span class="qa-icon">💳</span>
+        <span class="qa-label">View Dues</span>
+      </button>
+      <button class="qa-btn" onclick="setPage('reports')">
+        <span class="qa-icon">📈</span>
+        <span class="qa-label">Reports</span>
+      </button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card gold">
+        <div></div>
+        <div class="stat-value" id="stat-hotels">—</div>
+        <div class="stat-label">Active hotels</div>
+        <div class="stat-delta up" id="stat-hotels-delta">Loading...</div>
+      </div>
+      <div class="stat-card teal">
+        <div></div>
+        <div class="stat-value" id="stat-products">—</div>
+        <div class="stat-label">Products in system</div>
+        <div class="stat-delta up" id="stat-products-delta">Loading...</div>
+      </div>
+      <div class="stat-card coral">
+        <div></div>
+        <div class="stat-value" id="stat-sales">—</div>
+        <div class="stat-label">Sales this month</div>
+        <div class="stat-delta up" id="stat-sales-delta">Loading...</div>
+      </div>
+      <div class="stat-card purple">
+        <div></div>
+        <div class="stat-value" id="stat-dues">—</div>
+        <div class="stat-label">Total dues pending</div>
+        <div class="stat-delta down" id="stat-dues-delta">Loading...</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+
+      <div class="section-card">
+        <div class="section-head">
+          <h3>Recent sales</h3>
+          <button class="see-all" onclick="setPage('sales')">See all →</button>
+        </div>
+        <table class="sales-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody id="sales-tbody">
+            <tr class="loading-row"><td colspan="4">Loading sales...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head">
+          <h3>Live notifications</h3>
+          <button class="see-all" onclick="markAllRead()">Mark all read</button>
+        </div>
+        <div class="notif-feed" id="notif-feed">
+          <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">
+            Loading...
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="section-card">
+      <div class="section-head">
+        <h3>Hotels overview</h3>
+        <a href="hotels.html" class="see-all" onclick="setPage('hotels')">Manage hotels →</a>
+      </div>
+      <div class="hotels-grid" id="hotels-grid">
+        <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px;grid-column:1/-1">
+          Loading hotels...
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API   = "https://cims-ss3i.onrender.com/api";
+  const token = localStorage.getItem("cims_token");
+  const user  = JSON.parse(localStorage.getItem("cims_user") || "{}");
+
+  if (!token || !user || user.role !== "admin") {
+    window.location.href = "login.html";
+  }
+
+  window.addEventListener("load", () => {
+    if (user.name) {
+      document.getElementById("user-name").textContent    = user.name;
+      document.getElementById("user-avatar").textContent  = user.name.charAt(0).toUpperCase();
+      const hour = new Date().getHours();
+      const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+      document.getElementById("page-title").textContent = `${greeting}, ${user.name.split(" ")[0]} `;
+    }
+    loadDashboard();
+  });
+
+  const headers = {
+    "Content-Type":  "application/json",
+    "Authorization": `Bearer ${token}`,
+  };
+
+  async function loadDashboard() {
+    await Promise.all([
+      loadStats(),
+      loadRecentSales(),
+      loadNotifications(),
+      loadHotels(),
+    ]);
+  }
+
+  async function loadStats() {
+    try {
+      const res  = await fetch(`${API}/stats`, { headers });
+      const data = await res.json();
+      if (!data.success) return;
+
+      const s = data.stats;
+      document.getElementById("stat-hotels").textContent       = s.hotels       ?? "—";
+      document.getElementById("stat-products").textContent     = s.products      ?? "—";
+      document.getElementById("stat-sales").textContent        = s.sales_month   ?? "—";
+      document.getElementById("stat-dues").textContent         = s.dues_pending ? `₹${(s.dues_pending/1000).toFixed(0)}K` : "₹0";
+      document.getElementById("stat-hotels-delta").textContent = `${s.hotels} total active`;
+      document.getElementById("stat-products-delta").textContent = `${s.products} registered`;
+      document.getElementById("stat-sales-delta").textContent  = `This month`;
+      document.getElementById("stat-dues-delta").textContent   = `Across all hotels`;
+    } catch {
+      ["stat-hotels","stat-products","stat-sales","stat-dues"]
+        .forEach(id => document.getElementById(id).textContent = "—");
+    }
+  }
+
+  async function loadRecentSales() {
+    const tbody = document.getElementById("sales-tbody");
+    try {
+      const res  = await fetch(`${API}/sales/recent`, { headers });
+      const data = await res.json();
+
+      if (!data.success || !data.sales.length) {
+        tbody.innerHTML = `<tr class="loading-row"><td colspan="4">No sales yet</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = data.sales.map(s => `
+        <tr>
+          <td>
+            <div class="product-cell">
+              <div class="product-thumb">🏷️</div>
+              <div>
+                <div class="product-name">${s.products?.name ?? "—"}</div>
+                <div class="product-hotel">${s.hotels?.name ?? "—"}</div>
+              </div>
+            </div>
+          </td>
+          <td class="amount-cell">₹${Number(s.total_amount).toLocaleString()}</td>
+          <td><span class="status-pill paid">Sold</span></td>
+          <td style="color:var(--muted);font-size:12px">${timeAgo(s.sold_at)}</td>
+        </tr>
+      `).join("");
+    } catch {
+      tbody.innerHTML = `<tr class="loading-row"><td colspan="4">Could not load sales</td></tr>`;
+    }
+  }
+
+  async function loadNotifications() {
+    const feed = document.getElementById("notif-feed");
+    try {
+      const res  = await fetch(`${API}/notifications`, { headers });
+      const data = await res.json();
+
+      if (!data.success || !data.notifications.length) {
+        feed.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">No notifications yet</div>`;
+        return;
+      }
+
+      const unread = data.notifications.filter(n => !n.is_read).length;
+      document.getElementById("notif-badge").textContent = unread || "0";
+      if (unread > 0) document.getElementById("notif-dot").style.display = "block";
+
+      feed.innerHTML = data.notifications.slice(0, 10).map(n => `
+        <div class="notif-item ${n.is_read ? "" : "unread"}">
+          <div class="notif-dot-indicator ${n.is_read ? "read" : ""}"></div>
+          <div>
+            <div class="notif-text">${n.message}</div>
+            <div class="notif-time">${timeAgo(n.created_at)}</div>
+          </div>
+        </div>
+      `).join("");
+    } catch {
+      feed.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">Could not load notifications</div>`;
+    }
+  }
+
+  async function loadHotels() {
+    const grid = document.getElementById("hotels-grid");
+    try {
+      const res  = await fetch(`${API}/hotels`, { headers });
+      const data = await res.json();
+
+      if (!data.success || !data.hotels.length) {
+        grid.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px;grid-column:1/-1">No hotels added yet</div>`;
+        return;
+      }
+
+      grid.innerHTML = data.hotels.map(h => `
+        <div class="hotel-card">
+          <div class="hotel-card-top">
+            <div class="hotel-name">🏨 ${h.name}</div>
+            <div class="hotel-status"></div>
+          </div>
+          <div class="hotel-stat-row">
+            <div class="hotel-stat">
+              <div class="hotel-stat-val">${h.stock ?? 0}</div>
+              <div class="hotel-stat-lbl">In stock</div>
+            </div>
+            <div class="hotel-stat">
+              <div class="hotel-stat-val">${h.sold ?? 0}</div>
+              <div class="hotel-stat-lbl">Sold</div>
+            </div>
+            <div class="hotel-stat">
+              <div class="hotel-stat-val" style="color:#e07b73">₹${((h.dues ?? 0)/1000).toFixed(0)}K</div>
+              <div class="hotel-stat-lbl">Dues</div>
+            </div>
+          </div>
+        </div>
+      `).join("");
+    } catch {
+      grid.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px;grid-column:1/-1">Could not load hotels</div>`;
+    }
+  }
+
+  async function markAllRead() {
+    try {
+      await fetch(`${API}/notifications/read-all`, { method: "POST", headers });
+      document.getElementById("notif-badge").textContent  = "0";
+      document.getElementById("notif-dot").style.display  = "none";
+      document.querySelectorAll(".notif-item.unread").forEach(el => el.classList.remove("unread"));
+      document.querySelectorAll(".notif-dot-indicator").forEach(el => {
+        el.classList.add("read");
+      });
+      showToast("All notifications marked as read");
+    } catch {
+      showToast("Could not update notifications");
+    }
+  }
+
+  function setPage(page) {
+    if (page === "payments") { window.location.href = "payment.html"; return; }
+    if (page === "sales") { window.location.href = "sales.html"; return; }
+    document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+    const titles = {
+      dashboard:     "Dashboard",
+      notifications: "Notifications",
+      products:      "Products",
+      inventory:     "Inventory",
+      hotels:        "Hotels",
+      sales:         "Sales",
+      payments:      "Payments",
+      staff:         "Hotel Staff",
+      reports:       "Reports",
+    };
+    document.getElementById("topbar-title").textContent = titles[page] || "Dashboard";
+    closeSidebar();
+    showToast(`${titles[page]} page coming soon`);
+  }
+
+  function openSidebar() {
+    document.getElementById("sidebar").classList.add("open");
+    document.getElementById("sidebar-overlay").classList.add("visible");
+  }
+  function closeSidebar() {
+    document.getElementById("sidebar").classList.remove("open");
+    document.getElementById("sidebar-overlay").classList.remove("visible");
+  }
+
+  async function logout() {
+    try { await fetch(`${API}/auth/logout`, { method: "POST", headers }); } catch {}
+    localStorage.removeItem("cims_token");
+    localStorage.removeItem("cims_user");
+    localStorage.removeItem("cims_role");
+    window.location.href = "login.html";
+  }
+
+  let toastTimer;
+  function showToast(msg, type = "") {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.className   = `toast visible ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("visible"), 3000);
+  }
+
+  function timeAgo(dateStr) {
+    const value = String(dateStr || "");
+    const timestamp = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value) ? value : `${value}Z`;
+    const diff = Math.floor((Date.now() - new Date(timestamp)) / 1000);
+    if (!Number.isFinite(diff)) return "—";
+    if (diff < 60)   return "just now";
+    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+    if (diff < 86400)return `${Math.floor(diff/3600)}h ago`;
+    return `${Math.floor(diff/86400)}d ago`;
+  }
+
+  setInterval(loadDashboard, 30000);
+  
+</script>
+<script src="sanitize.js"></script>
+<script src="timeout.js"></script>
+</body>
+</html>

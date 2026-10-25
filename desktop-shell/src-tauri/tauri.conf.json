@@ -1,0 +1,32 @@
+{
+"$schema": "https://schema.tauri.app/config/2",
+"productName": "CIMS",
+"version": "1.0.0",
+"identifier": "com.avech.cims",
+"build": {
+"frontendDist": "../src"
+},
+"app": {
+"withGlobalTauri": false,
+"windows": [
+  {
+    "title": "CIMS",
+    "url": "https://cims-j5ymndxri-cims3.vercel.app",
+    "width": 1280,
+    "height": 800,
+    "minWidth": 900,
+    "minHeight": 600,
+    "center": true
+  }
+],
+"security": {
+"csp": null
+}
+},
+"bundle": {
+"active": true,
+"targets": ["nsis"],
+"shortDescription": "Collaborative inventory management system",
+"longDescription": "Collaborative inventory and sales management application - Vismayadarsini"
+}
+}

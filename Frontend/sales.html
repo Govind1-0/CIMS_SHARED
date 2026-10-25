@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#1a1a2e"/>
+  <title>CIMS — Sales</title>
+  <style>
+    html, body {
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    html { min-height: 100%; }
+    body { min-height: 100%; }
+
+    button, input, select, textarea { font: inherit; }
+
+    @supports (-webkit-touch-callout: none) {
+      body { min-height: -webkit-fill-available; }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #1a1a2e;
+      --navy-mid:   #16213e;
+      --navy-light: #1e2a45;
+      --gold:       #fdfbf7;
+      --white:      #f0f0ee;
+      --gold-pale:  rgba(226,185,111,.1);
+      --teal:       #2e7d6e;
+      --coral:      #c0534a;
+      --white:      #ffffff;
+      --text:       #e8e8f4;
+      --muted:      rgba(232,232,244,.5);
+      --border:     rgba(255,255,255,.08);
+      --card-bg:    rgba(255,255,255,.04);
+      --card-hover: rgba(255,255,255,.07);
+      --radius:     14px;
+      --sidebar-w:  240px;
+    }
+
+    html, body { height: 100%; font-family: system-ui, -apple-system, sans-serif; }
+
+    body {
+      background: var(--navy);
+      color: var(--text);
+      display: flex;
+      min-height: 100dvh;
+    }
+
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--navy-mid);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 50;
+      transition: transform .25s ease;
+    }
+
+    .sidebar-logo {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--gold), var(--white));
+      font-size: 15px; font-weight: 700;
+      color: var(--navy); margin-bottom: 10px;
+    }
+    .sidebar-logo h1 { font-size: 16px; font-weight: 700; }
+    .sidebar-logo p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+
+    .nav-label {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: var(--muted); padding: 12px 10px 6px;
+    }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 9px;
+      font-size: 14px; font-weight: 500;
+      color: var(--muted); cursor: pointer;
+      transition: all .15s; border: none;
+      background: none; width: 100%; text-align: left;
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-item:hover  { background: var(--card-bg); color: var(--text); }
+    .nav-item.active { background: var(--gold-pale); color: var(--gold); font-weight: 600; }
+    .nav-item .icon  { width: 20px; text-align: center; flex-shrink: 0; font-style: normal; }
+
+    .sidebar-footer { padding: 16px 10px; border-top: 1px solid var(--border); }
+    .user-pill {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 9px; background: var(--card-bg);
+    }
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), var(--white));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: var(--navy); flex-shrink: 0;
+    }
+    .user-info .name { font-size: 13px; font-weight: 600; }
+    .user-info .role { font-size: 11px; color: var(--muted); }
+    .logout-btn {
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; font-size: 14px; padding: 4px;
+      transition: color .15s; flex-shrink: 0; margin-left: auto;
+    }
+    .logout-btn:hover { color: var(--coral); }
+
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.6); z-index: 40;
+    }
+    .sidebar-overlay.visible { display: block; }
+
+    .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100dvh; }
+
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 24px; border-bottom: 1px solid var(--border);
+      background: rgba(26,26,46,.8); backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 30;
+    }
+    .topbar-menu {
+      display: none; background: none; border: none;
+      color: var(--text); font-size: 20px; cursor: pointer; padding: 4px;
+    }
+    .topbar-title { font-size: 16px; font-weight: 600; flex: 1; }
+
+    .btn-primary {
+      padding: 10px 18px; border: none; border-radius: 9px;
+      background: linear-gradient(135deg, var(--gold), var(--white));
+      color: var(--navy); font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: opacity .15s, transform .1s;
+      -webkit-tap-highlight-color: transparent; white-space: nowrap;
+    }
+    .btn-primary:hover  { opacity: .9; }
+    .btn-primary:active { transform: scale(.97); }
+
+    .content { padding: 24px; flex: 1; }
+
+    .page-header { margin-bottom: 20px; }
+    .page-header h2 { font-size: 22px; font-weight: 700; }
+    .page-header p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px; margin-bottom: 20px;
+    }
+    .stat-mini {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px;
+      position: relative; overflow: hidden;
+    }
+    .stat-mini::before {
+      content: ""; position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+    }
+    .stat-mini.gold::before   { background: linear-gradient(90deg, var(--gold), transparent); }
+    .stat-mini.teal::before   { background: linear-gradient(90deg, #4db89e, transparent); }
+    .stat-mini.coral::before  { background: linear-gradient(90deg, #e07b73, transparent); }
+    .stat-mini.purple::before { background: linear-gradient(90deg, #a29bf0, transparent); }
+    .stat-mini-val   { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .stat-mini.gold   .stat-mini-val { color: var(--gold); }
+    .stat-mini.teal   .stat-mini-val { color: #4db89e; }
+    .stat-mini.coral  .stat-mini-val { color: #e07b73; }
+    .stat-mini.purple .stat-mini-val { color: #a29bf0; }
+    .stat-mini-lbl { font-size: 11px; color: var(--muted); font-weight: 500; }
+
+    .toolbar {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .search-wrap { position: relative; flex: 1; min-width: 200px; }
+    .search-wrap input {
+      width: 100%; padding: 10px 14px 10px 36px;
+      background: var(--card-bg); border: 1.5px solid var(--border);
+      border-radius: 9px; color: var(--text); font-size: 14px; outline: none;
+      transition: border-color .15s;
+    }
+    .search-wrap input:focus { border-color: var(--gold); }
+    .search-wrap input::placeholder { color: var(--muted); }
+    .search-icon {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%); color: var(--muted); font-size: 14px;
+    }
+
+    .filter-select {
+      padding: 10px 14px; background: var(--card-bg);
+      border: 1.5px solid var(--border); border-radius: 9px;
+      color: var(--text); font-size: 13px; outline: none;
+      cursor: pointer;
+    }
+    .filter-select:focus { border-color: var(--gold); }
+
+    .pay-table-wrap {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+
+    .pay-table { width: 100%; border-collapse: collapse; }
+    .pay-table th {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .5px;
+      padding: 12px 20px; text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .pay-table td {
+      padding: 14px 20px; font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      vertical-align: middle;
+    }
+    .pay-table tr:last-child td { border-bottom: none; }
+    .pay-table tr:hover td { background: var(--card-hover); }
+
+    .hotel-name-cell { font-weight: 600; font-size: 14px; }
+    .hotel-contact   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+    }
+    .status-pill.active   { background: rgba(77,184,158,.15); color: #4db89e; }
+    .status-pill.inactive { background: rgba(192,83,74,.15);  color: #e07b73; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    .dues-cell { font-weight: 600; color: #e07b73; }
+    .dues-cell.clear { color: #4db89e; }
+
+    .action-btns { display: flex; align-items: center; gap: 6px; }
+    .action-btn {
+      padding: 6px 12px; border-radius: 7px; font-size: 12px;
+      font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+      background: var(--card-bg); color: var(--muted);
+      transition: all .15s; -webkit-tap-highlight-color: transparent;
+    }
+    .action-btn:hover          { background: var(--card-hover); color: var(--text); }
+    .action-btn.view           { color: var(--gold); border-color: rgba(226,185,111,.2); }
+    .action-btn.view:hover     { background: var(--gold-pale); }
+    .action-btn.edit           { color: #a29bf0; border-color: rgba(162,155,240,.2); }
+    .action-btn.edit:hover     { background: rgba(162,155,240,.1); }
+    .action-btn.deactivate     { color: #e07b73; border-color: rgba(224,123,115,.2); }
+    .action-btn.deactivate:hover { background: rgba(224,123,115,.1); }
+    .action-btn.activate       { color: #4db89e; border-color: rgba(77,184,158,.2); }
+    .action-btn.activate:hover { background: rgba(77,184,158,.1); }
+    .action-btn.delete         { color: #e07b73; border-color: rgba(224,123,115,.2); }
+    .action-btn.delete:hover   { background: rgba(224,123,115,.15); }
+
+    .empty-state {
+      padding: 60px 24px; text-align: center; color: var(--muted);
+    }
+    .empty-state p { font-size: 14px; margin-bottom: 16px; }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.7); z-index: 100;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.visible { display: flex; }
+
+    .modal {
+      background: var(--navy-mid); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px 24px;
+      width: 100%; max-width: 480px;
+      animation: fadeUp .2s ease;
+      max-height: 90dvh; overflow-y: auto;
+    }
+    @keyframes fadeUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: .5px; margin-bottom: 6px;
+    }
+    .field input, .field select {
+      width: 100%; padding: 11px 14px;
+      background: rgba(255,255,255,.06); border: 1.5px solid var(--border);
+      border-radius: 9px; color: var(--text); font-size: 14px; outline: none;
+      transition: border-color .15s; 
+    }
+    .field input:focus, .field select:focus { border-color: var(--gold); }
+    .field input::placeholder { color: var(--muted); }
+    .field select option { background: var(--navy-mid); }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .modal-btn {
+      flex: 1; padding: 12px; border: none; border-radius: 9px;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    .modal-btn:active   { transform: scale(.97); }
+    .modal-btn.confirm  { background: linear-gradient(135deg, var(--gold), var(--white)); color: var(--navy); }
+    .modal-btn.cancel   { background: var(--card-bg); color: var(--muted); border: 1px solid var(--border); }
+    .modal-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .modal-err {
+      padding: 10px 14px; border-radius: 8px; font-size: 13px;
+      font-weight: 500; margin-bottom: 14px; display: none;
+      background: rgba(192,83,74,.15); color: #e07b73;
+      border: 1px solid rgba(192,83,74,.3);
+    }
+    .modal-err.visible { display: block; }
+
+    .confirm-modal-text {
+      font-size: 14px; color: var(--muted); margin-bottom: 20px; line-height: 1.6;
+    }
+    .confirm-modal-text strong { color: var(--text); }
+
+    .detail-modal { max-width: 560px; }
+    .detail-section { margin-bottom: 20px; }
+    .detail-section h4 {
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px;
+    }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .detail-item { background: var(--navy-light); border-radius: 8px; padding: 12px 14px; }
+    .detail-item-lbl { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .detail-item-val { font-size: 14px; font-weight: 600; }
+
+    .inv-list { background: var(--navy-light); border-radius: 8px; overflow: hidden; }
+    .inv-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .inv-row:last-child { border-bottom: none; }
+    .btn-paid {
+      background: rgba(77,184,158,.15); color: #4db89e;
+      border: 1px solid rgba(77,184,158,.35); border-radius: 6px;
+      padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+      font-family: inherit; margin-left: 8px;
+    }
+    .btn-paid:hover { background: rgba(77,184,158,.25); }
+    .btn-paid:disabled { opacity: .5; cursor: default; }
+    .pay-status { font-size: 10px; text-transform: uppercase; color: var(--muted); margin-left: 8px; margin-right: 10px; }
+    .inv-stock { font-weight: 600; color: #4db89e; }
+    .inv-stock.low { color: #e07b73; }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--navy-light); border: 1px solid var(--border);
+      border-left: 3px solid var(--gold); border-radius: 10px;
+      padding: 12px 16px; font-size: 13px; font-weight: 500;
+      z-index: 200; transform: translateY(80px); opacity: 0;
+      transition: all .3s cubic-bezier(.4,0,.2,1); max-width: 300px;
+    }
+    .toast.visible { transform: translateY(0); opacity: 1; }
+    .toast.error   { border-left-color: #e07b73; }
+    .toast.success { border-left-color: #4db89e; }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .topbar-menu { display: block; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .content { padding: 16px; }
+      .field-row { grid-template-columns: 1fr; }
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 480px) {
+      .stats-row { grid-template-columns: 1fr 1fr; }
+
+      .action-btns { flex-wrap: wrap; gap: 4px; }
+      .action-btn  { padding: 5px 8px; font-size: 11px; }
+
+      .toolbar { flex-direction: column; }
+      .search-wrap { width: 100%; }
+      .filter-select { width: 100%; }
+    }
+    @media (max-width: 480px) {
+      .content { padding: 12px; }
+
+      .topbar  { padding: 12px 14px; }
+
+      .modal   { padding: 20px 16px; margin: 0 8px; }
+
+      table    { font-size: 12px; }
+      table th,
+      table td { padding: 10px 12px; }
+    }
+  
+    /* mobile width fix: stop the table from stretching the page */
+    .main { min-width: 0; }
+    .pay-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    @media (max-width: 480px) {
+      .pay-table th, .pay-table td { padding: 10px 8px; }
+    }
+
+    /* ---- payments page ---- */
+    .status-pill.pending { background: rgba(162,155,240,.15); color: #a29bf0; }
+    .status-pill.partial { background: rgba(226,185,111,.15); color: #e2b96f; }
+    .status-pill.overdue { background: rgba(192,83,74,.15);  color: #e07b73; }
+    .status-pill.paid    { background: rgba(77,184,158,.15); color: #4db89e; }
+    .amount-cell { font-weight: 700; white-space: nowrap; }
+    .amount-cell.paid { color: #4db89e; }
+    .amount-cell.open { color: #e07b73; }
+    .pay-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .action-btn.paid   { color: #4db89e; border-color: rgba(77,184,158,.3); }
+    .action-btn.paid:hover { background: rgba(77,184,158,.12); }
+    .action-btn.reopen { color: #a29bf0; border-color: rgba(162,155,240,.2); }
+    .action-btn.reopen:hover { background: rgba(162,155,240,.1); }
+    .empty-row { padding: 50px 20px !important; text-align: center; color: var(--muted); }
+
+    @media (max-width: 480px) {
+      .pay-table th, .pay-table td { padding: 10px 6px; }
+      .pay-table th:first-child, .pay-table td:first-child { padding-left: 12px; }
+      .pay-table .status-dot { display: none; }
+      .pay-table .status-pill { padding: 3px 8px; font-size: 10px; }
+      .pay-table .action-btns { flex-direction: column; align-items: stretch; gap: 4px; }
+      .pay-table .action-btn { padding: 5px 6px; text-align: center; }
+    }
+  
+    @media (max-width: 380px) {
+      .pay-table th, .pay-table td { padding: 10px 4px; }
+      .pay-table .hotel-name-cell { font-size: 13px; }
+      .pay-table .amount-cell { font-size: 12px; }
+      .pay-table th { letter-spacing: 0; font-size: 10px; }
+    }
+
+    /* ---- sales page ---- */
+    .qty-cell { color: var(--muted); white-space: nowrap; }
+    .sale-amount { font-weight: 700; white-space: nowrap; color: #4db89e; }
+    .sale-when { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .more-wrap { text-align: center; margin-top: 14px; }
+    .more-btn {
+      background: var(--card-bg); color: var(--text); border: 1px solid var(--border);
+      border-radius: 9px; padding: 10px 22px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .more-btn:hover { background: var(--card-hover); }
+    @media (max-width: 480px) {
+      .pay-table .sale-when { white-space: normal; }
+    }
+</style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="mark">C</div>
+    <h1>CIMS</h1>
+    <p>Admin Dashboard</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">Overview</div>
+    <a class="nav-item" href="admin.html"><i class="icon">&#9679;</i> Dashboard</a>
+    <div class="nav-label">Inventory</div>
+    <a class="nav-item" href="index.html"><i class="icon">&#9679;</i> Add Stock</a>
+    <div class="nav-label">Business</div>
+    <a class="nav-item" href="hotels.html"><i class="icon">&#9679;</i> Hotels</a>
+    <a class="nav-item" href="payment.html"><i class="icon">&#9679;</i> Payments</a>
+    <a class="nav-item active" href="sales.html"><i class="icon">&#9679;</i> Sales</a>
+    <a class="nav-item" href="staff.html"><i class="icon">&#9679;</i> Staff</a>
+    <a class="nav-item" href="products.html"><i class="icon">&#9679;</i> Products</a>
+    <a class="nav-item" href="reports.html"><i class="icon">&#9679;</i> Reports</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="user-avatar" id="user-avatar">A</div>
+      <div class="user-info">
+        <div class="name" id="user-name">Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+      <button class="logout-btn" onclick="logout()">&#8618;</button>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <button class="topbar-menu" onclick="openSidebar()">&#9776;</button>
+    <div class="topbar-title">Sales</div>
+    <button class="btn-primary" onclick="loadSales()">&#8635; Refresh</button>
+  </div>
+
+  <div class="content">
+
+    <div class="page-header">
+      <h2>Sales</h2>
+      <p>Every sale recorded by your hotels — filter by period, hotel or product.</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-mini teal">
+        <div class="stat-mini-val" id="stat-revenue">—</div>
+        <div class="stat-mini-lbl">Revenue</div>
+      </div>
+      <div class="stat-mini purple">
+        <div class="stat-mini-val" id="stat-units">—</div>
+        <div class="stat-mini-lbl">Units sold</div>
+      </div>
+      <div class="stat-mini gold">
+        <div class="stat-mini-val" id="stat-count">—</div>
+        <div class="stat-mini-lbl">Sales</div>
+      </div>
+      <div class="stat-mini coral">
+        <div class="stat-mini-val" id="stat-avg">—</div>
+        <div class="stat-mini-lbl">Avg. sale</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">&#9906;</span>
+        <input type="text" id="search-input" placeholder="Search product or hotel..." oninput="resetAndRender()"/>
+      </div>
+      <select class="filter-select" id="period-filter" onchange="loadSales()">
+        <option value="today">Today</option>
+        <option value="7">Last 7 days</option>
+        <option value="30" selected>Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="365">Last year</option>
+      </select>
+      <select class="filter-select" id="hotel-filter" onchange="resetAndRender()">
+        <option value="">All hotels</option>
+      </select>
+      <select class="filter-select" id="sort-filter" onchange="resetAndRender()">
+        <option value="new">Newest first</option>
+        <option value="high">Highest amount</option>
+      </select>
+    </div>
+
+    <div class="hotels-table-wrap">
+      <table class="pay-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Qty</th>
+            <th>Amount</th>
+            <th>When</th>
+          </tr>
+        </thead>
+        <tbody id="sales-tbody">
+          <tr><td colspan="4" class="empty-row">Loading sales...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="more-wrap" id="more-wrap" style="display:none">
+      <button class="more-btn" id="more-btn" onclick="showMore()"></button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API     = "https://cims-ss3i.onrender.com/api";
+  const token   = localStorage.getItem("cims_token");
+  const user    = JSON.parse(localStorage.getItem("cims_user") || "{}");
+  const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
+
+  const PAGE_SIZE = 50;
+  let allSales = [];
+  let filtered = [];
+  let shown    = PAGE_SIZE;
+  let toastTimer;
+
+  if (!token || !user || user.role !== "admin") {
+    window.location.href = "login.html";
+  }
+
+  window.addEventListener("load", () => {
+    document.getElementById("user-name").textContent   = user.name || "Admin";
+    document.getElementById("user-avatar").textContent = (user.name || "A").charAt(0).toUpperCase();
+    loadSales();
+  });
+
+  // ---------- helpers ----------
+  function esc(v) {
+    return String(v ?? "").replace(/[&<>"']/g, c => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function money(n) { return "\u20B9" + Number(n || 0).toLocaleString("en-IN"); }
+  function ymd(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  function fmtWhen(iso) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleString("en-IN", {
+      day: "numeric", month: "short", hour: "numeric", minute: "2-digit",
+    });
+  }
+
+  // ---------- load ----------
+  async function loadSales() {
+    const period = document.getElementById("period-filter").value;
+    const days   = period === "today" ? 1 : period;
+    document.getElementById("sales-tbody").innerHTML =
+      `<tr><td colspan="4" class="empty-row">Loading sales...</td></tr>`;
+    try {
+      const res  = await fetch(`${API}/reports/sales?days=${days}`, { headers });
+      const data = await res.json();
+      if (!data.success) {
+        showToast(data.message || "Could not load sales", "error");
+        document.getElementById("sales-tbody").innerHTML =
+          `<tr><td colspan="4" class="empty-row">Could not load sales.</td></tr>`;
+        return;
+      }
+      let sales = data.sales || [];
+      if (period === "today") {
+        const t = ymd(new Date());
+        sales = sales.filter(s => s.sold_at && ymd(new Date(s.sold_at)) === t);
+      }
+      allSales = sales;
+      fillHotelFilter();
+      resetAndRender();
+    } catch {
+      showToast("Cannot connect to server", "error");
+      document.getElementById("sales-tbody").innerHTML =
+        `<tr><td colspan="4" class="empty-row">Cannot connect to server.</td></tr>`;
+    }
+  }
+
+  function fillHotelFilter() {
+    const sel  = document.getElementById("hotel-filter");
+    const keep = sel.value;
+    const seen = new Map();
+    allSales.forEach(s => seen.set(s.hotel_id, s.hotels?.name || "Unknown hotel"));
+    sel.innerHTML = `<option value="">All hotels</option>` +
+      [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]))
+        .map(([id, name]) => `<option value="${esc(id)}">${esc(name)}</option>`).join("");
+    sel.value = seen.has(keep) ? keep : "";
+  }
+
+  // ---------- filter / render ----------
+  function resetAndRender() { shown = PAGE_SIZE; applyFilters(); }
+
+  function applyFilters() {
+    const q     = document.getElementById("search-input").value.trim().toLowerCase();
+    const hotel = document.getElementById("hotel-filter").value;
+    const sort  = document.getElementById("sort-filter").value;
+
+    filtered = allSales.filter(s => {
+      if (hotel && s.hotel_id !== hotel) return false;
+      if (q && !`${s.products?.name || ""} ${s.hotels?.name || ""}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+
+    if (sort === "high") filtered.sort((a, b) => Number(b.total_amount) - Number(a.total_amount));
+    else                 filtered.sort((a, b) => String(b.sold_at).localeCompare(String(a.sold_at)));
+
+    renderStats();
+    renderTable();
+  }
+
+  function renderStats() {
+    const revenue = filtered.reduce((s, x) => s + (Number(x.total_amount) || 0), 0);
+    const units   = filtered.reduce((s, x) => s + (Number(x.quantity_sold) || 0), 0);
+    const count   = filtered.length;
+    document.getElementById("stat-revenue").textContent = money(revenue);
+    document.getElementById("stat-units").textContent   = units.toLocaleString("en-IN");
+    document.getElementById("stat-count").textContent   = count.toLocaleString("en-IN");
+    document.getElementById("stat-avg").textContent     = count ? money(Math.round(revenue / count)) : money(0);
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById("sales-tbody");
+    const wrap  = document.getElementById("more-wrap");
+
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="4" class="empty-row">No sales found for this selection.</td></tr>`;
+      wrap.style.display = "none";
+      return;
+    }
+
+    tbody.innerHTML = filtered.slice(0, shown).map(s => `
+      <tr>
+        <td>
+          <div class="hotel-name-cell">${esc(s.products?.name || "Unknown product")}</div>
+          <div class="pay-sub">${esc(s.hotels?.name || "Unknown hotel")}</div>
+        </td>
+        <td class="qty-cell">&times;${esc(s.quantity_sold)}</td>
+        <td>
+          <div class="sale-amount">${money(s.total_amount)}</div>
+          <div class="pay-sub">${money(s.sale_price)} each</div>
+        </td>
+        <td class="sale-when">${esc(fmtWhen(s.sold_at))}</td>
+      </tr>`).join("");
+
+    const left = filtered.length - shown;
+    if (left > 0) {
+      document.getElementById("more-btn").textContent = `Show more (${left} left)`;
+      wrap.style.display = "block";
+    } else {
+      wrap.style.display = "none";
+    }
+  }
+
+  function showMore() { shown += PAGE_SIZE; renderTable(); }
+
+  // ---------- shell ----------
+  function openSidebar()  {
+    document.getElementById("sidebar").classList.add("open");
+    document.getElementById("sidebar-overlay").classList.add("visible");
+  }
+  function closeSidebar() {
+    document.getElementById("sidebar").classList.remove("open");
+    document.getElementById("sidebar-overlay").classList.remove("visible");
+  }
+  function logout() {
+    localStorage.removeItem("cims_token");
+    localStorage.removeItem("cims_user");
+    localStorage.removeItem("cims_role");
+    window.location.href = "login.html";
+  }
+  function showToast(msg, type = "") {
+    const el = document.getElementById("toast");
+    el.textContent = msg; el.className = `toast visible ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("visible"), 3000);
+  }
+</script>
+<script src="sanitize.js"></script>
+<script src="timeout.js"></script>
+</body>
+</html>

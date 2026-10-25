@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="theme-color" content="#0f3d30"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <title>CIMS — Hotel Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:      #0b0728;
+      --green-mid:  #0e316e44;
+      --green-lite: #110d41;
+      --accent:     #7edcb4;
+      --accent-dk:  #4db89e;
+      --gold:       #e2b96f;
+      --coral:      #e07b73;
+      --white:      #ffffff;
+      --text:       #e8f4f0;
+      --muted:      rgba(232,244,240,.5);
+      --border:     rgba(255,255,255,.08);
+      --card-bg:    rgba(255,255,255,.04);
+      --card-hover: rgba(255,255,255,.07);
+      --radius:     14px;
+      --sidebar-w:  220px;
+    }
+
+    html, body { height: 100%; font-family: system-ui, -apple-system, sans-serif; }
+
+    body {
+      background: var(--green);
+      color: var(--text);
+      display: flex;
+      min-height: 100dvh;
+    }
+
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--green-mid);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 50;
+      transition: transform .25s ease;
+    }
+
+    .sidebar-logo {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dk));
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 10px;
+    }
+    .sidebar-logo h1 { font-size: 15px; font-weight: 700; }
+    .sidebar-logo p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .15s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-item:hover  { background: var(--card-bg); color: var(--text); }
+    .nav-item.active { background: rgba(126,220,180,.1); color: var(--accent); font-weight: 600; }
+    .nav-item .icon  { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
+
+    .sidebar-footer {
+      padding: 16px 10px;
+      border-top: 1px solid var(--border);
+    }
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 9px;
+      background: var(--card-bg);
+    }
+    .user-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dk));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      color: var(--green); flex-shrink: 0;
+    }
+    .user-info .name { font-size: 13px; font-weight: 600; }
+    .user-info .hotel-name { font-size: 11px; color: var(--muted); }
+    .logout-btn {
+      background: none; border: none;
+      color: var(--muted); cursor: pointer;
+      font-size: 14px; padding: 4px;
+      transition: color .15s; flex-shrink: 0; margin-left: auto;
+    }
+    .logout-btn:hover { color: var(--coral); }
+
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.6); z-index: 40;
+    }
+    .sidebar-overlay.visible { display: block; }
+
+    .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100dvh; }
+
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(11, 11, 55, 0.9);
+      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 30;
+    }
+    .topbar-menu {
+      display: none; background: none; border: none;
+      color: var(--text); font-size: 20px; cursor: pointer; padding: 4px;
+    }
+    .topbar-title { font-size: 15px; font-weight: 600; flex: 1; }
+    .topbar-time  { font-size: 12px; color: var(--muted); }
+
+    .content { padding: 20px; flex: 1; }
+
+    .welcome-banner {
+      background: linear-gradient(135deg, var(--green-lite), var(--teal));
+      border: 1px solid rgba(126,220,180,.2);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .welcome-banner h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .welcome-banner p  { font-size: 13px; color: rgba(255,255,255,.7); }
+    .welcome-banner .date { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 6px; }
+    .banner-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+
+    .scan-cta {
+      background: linear-gradient(135deg, var(--accent-dk), var(--accent));
+      border: none;
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      width: 100%;
+      color: var(--white);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgb(208, 219, 213);
+      transition: opacity .15s, transform .1s;
+      -webkit-tap-highlight-color: transparent;
+      letter-spacing: .2px;
+    }
+    
+    .scan-cta:active { transform: scale(.98); opacity: .9; }
+    .scan-cta-icon {
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      background: rgba(255,255,255,.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: ""; position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+    }
+    .stat-card.green::before  { background: linear-gradient(90deg, var(--accent), transparent); }
+    .stat-card.gold::before   { background: linear-gradient(90deg, var(--gold), transparent); }
+    .stat-card.coral::before  { background: linear-gradient(90deg, var(--coral), transparent); }
+    .stat-card.purple::before { background: linear-gradient(90deg, #a29bf0, transparent); }
+
+    .stat-icon  {
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      background: rgba(255,255,255,.06);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; margin-bottom: 12px;
+    }
+    .stat-value { font-size: 24px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+    .stat-card.green  .stat-value { color: var(--accent); }
+    .stat-card.gold   .stat-value { color: var(--gold); }
+    .stat-card.coral  .stat-value { color: var(--coral); }
+    .stat-card.purple .stat-value { color: #a29bf0; }
+    .stat-label { font-size: 11px; color: var(--muted); font-weight: 500; }
+
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .section-head {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-head h3 { font-size: 14px; font-weight: 600; }
+    .section-badge {
+      font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 20px;
+      background: rgba(224,123,115,.15);
+      color: var(--coral);
+    }
+
+    .inv-table { width: 100%; border-collapse: collapse; }
+    .inv-table th {
+      font-size: 11px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: .5px; padding: 10px 18px;
+      text-align: left; border-bottom: 1px solid var(--border);
+    }
+    .inv-table td {
+      padding: 12px 18px; font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+    }
+    .inv-table tr:last-child td { border-bottom: none; }
+    .inv-table tr:hover td { background: var(--card-hover); }
+
+    .stock-bar-wrap { width: 80px; height: 6px; background: rgba(255,255,255,.1); border-radius: 3px; }
+    .stock-bar      { height: 100%; border-radius: 3px; transition: width .3s; }
+    .stock-bar.high { background: var(--accent-dk); }
+    .stock-bar.low  { background: var(--gold); }
+    .stock-bar.out  { background: var(--coral); }
+
+    .stock-num { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .stock-num.low-stock { color: var(--coral); }
+
+    .alert-banner {
+      background: rgba(224,123,115,.1);
+      border: 1px solid rgba(224,123,115,.25);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .alert-banner.visible { display: flex; }
+    .alert-banner strong  { color: var(--coral); }
+
+    .sales-list { max-height: 320px; overflow-y: auto; }
+    .sale-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 18px;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      transition: background .15s;
+    }
+    .sale-item:last-child { border-bottom: none; }
+    .sale-item:hover      { background: var(--card-hover); }
+    .sale-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent-dk);
+      flex-shrink: 0;
+    }
+    .sale-name  { font-size: 13px; font-weight: 500; }
+    .sale-meta  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .sale-amount { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+
+    .dues-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .dues-amount {
+      font-size: 36px; font-weight: 700;
+      color: var(--coral); margin: 10px 0 4px;
+    }
+    .dues-label { font-size: 13px; color: var(--muted); }
+    .dues-breakdown { margin-top: 16px; }
+    .dues-row {
+      display: flex; justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .dues-row:last-child { border-bottom: none; }
+    .dues-status {
+      font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .dues-status.pending { background: rgba(226,185,111,.15); color: var(--gold); }
+    .dues-status.overdue { background: rgba(224,123,115,.15); color: var(--coral); }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.85);
+      z-index: 100; align-items: flex-end;
+    }
+    .modal-overlay.visible { display: flex; }
+
+    .scan-modal {
+      background: var(--green-mid);
+      border: 1px solid var(--border);
+      border-radius: 20px 20px 0 0;
+      padding: 24px 20px;
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
+      animation: slideUp .25s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+    .modal-handle {
+      width: 40px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 auto 20px;
+    }
+    .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+
+    .viewfinder-wrap {
+      position: relative; width: 100%;
+      aspect-ratio: 4/3; border-radius: 12px;
+      overflow: hidden; background: #000; margin-bottom: 12px;
+    }
+    #scanner-target, #scanner-target video, #scanner-target canvas { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+    .scan-frame {
+      width: 65%; aspect-ratio: 3/2;
+      border: 2.5px solid rgba(255,255,255,.8);
+      border-radius: 8px; position: relative;
+      box-shadow: 0 0 0 2000px rgba(0,0,0,.4);
+    }
+    .scan-line {
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: scanline 2s ease-in-out infinite;
+    }
+    @keyframes scanline { 0% { top: 0; } 90% { top: 95%; } 100% { top: 100%; opacity: 0; } }
+
+    .scan-hint { font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 12px; }
+
+    .confirm-card {
+      display: none;
+      background: rgba(126,220,180,.08);
+      border: 1px solid rgba(126,220,180,.2);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .confirm-card.visible { display: block; }
+    .confirm-product { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+    .confirm-img { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); }
+    .confirm-name  { font-size: 14px; font-weight: 600; }
+    .confirm-meta  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .confirm-price { font-size: 13px; color: var(--accent); font-weight: 600; margin-top: 2px; }
+
+    .qty-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .qty-label { font-size: 13px; font-weight: 500; flex: 1; }
+    .qty-control { display: flex; align-items: center; gap: 8px; }
+    .qty-btn {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--card-bg); border: 1px solid var(--border);
+      color: var(--text); font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .qty-btn:hover { background: var(--card-hover); }
+    .qty-display { font-size: 16px; font-weight: 700; min-width: 24px; text-align: center; }
+
+    .btn { width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity .15s, transform .1s; -webkit-tap-highlight-color: transparent; }
+    .btn:active { transform: scale(.97); }
+    .btn-confirm { background: var(--accent-dk); color: #fff; margin-bottom: 8px; }
+    .btn-cancel  { background: var(--card-bg); color: var(--muted); border: 1px solid var(--border); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .modal-input {
+      width: 100%; padding: 11px 14px;
+      background: rgba(255,255,255,.06);
+      border: 1.5px solid var(--border);
+      border-radius: 8px; color: var(--text);
+      font-size: 14px; outline: none;
+      margin-bottom: 10px;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+
+    .contact-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 12px; cursor: pointer;
+      transition: background .15s;
+    }
+    .contact-card:hover { background: var(--card-hover); }
+    .contact-icon-wrap {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: rgba(255,255,255,.06);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .contact-text h4 { font-size: 14px; font-weight: 600; }
+    .contact-text p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .contact-arrow   { margin-left: auto; color: var(--muted); font-size: 16px; }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 20px;
+      background: var(--green-mid);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 10px; padding: 12px 16px;
+      font-size: 13px; font-weight: 500;
+      z-index: 200; transform: translateY(80px); opacity: 0;
+      transition: all .3s cubic-bezier(.4,0,.2,1); max-width: 280px;
+    }
+    .toast.visible { transform: translateY(0); opacity: 1; }
+    .toast.error   { border-left-color: var(--coral); }
+
+    .empty { padding: 32px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .topbar-menu { display: block; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .content { padding: 14px; }
+    }
+    @media (max-width: 400px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .stat-value { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="mark">H</div>
+    <h1 id="sidebar-hotel">Hotel Dashboard</h1>
+    <p>Staff Portal</p>
+  </div>
+
+  <nav class="sidebar-nav">
+    <button class="nav-item active" onclick="showSection('dashboard', this)">
+      <span class="icon">&#9679;</span> Dashboard
+    </button>
+    <button class="nav-item" onclick="showSection('inventory', this)">
+      <span class="icon">&#9679;</span> Inventory
+    </button>
+    <button class="nav-item" onclick="showSection('sales', this)">
+      <span class="icon">&#9679;</span> Sales History
+    </button>
+    <button class="nav-item" onclick="showSection('payments', this)">
+      <span class="icon">&#9679;</span> Payment Dues
+    </button>
+    <button class="nav-item" onclick="showSection('contact', this)">
+      <span class="icon">&#9679;</span> Contact Admin
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="user-avatar" id="user-avatar">S</div>
+      <div class="user-info">
+        <div class="name" id="user-name">Staff</div>
+        <div class="hotel-name" id="user-hotel">Hotel</div>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="Logout">&#8618;</button>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <button class="topbar-menu" onclick="openSidebar()">&#9776;</button>
+    <div class="topbar-title" id="topbar-title">Dashboard</div>
+    <div class="topbar-time" id="topbar-time"></div>
+  </div>
+
+  <div class="content">
+
+    <div class="alert-banner" id="low-stock-alert">
+      <span>&#9888;</span>
+      <span><strong>Low stock alert:</strong> <span id="low-stock-text"></span> running low — please notify admin.</span>
+    </div>
+
+    <div class="welcome-banner">
+      <div>
+        <h2 id="welcome-text">Welcome back</h2>
+        <p id="hotel-name-text">Loading your hotel...</p>
+        <div class="date" id="date-text"></div>
+      </div>
+      <div class="banner-icon">H</div>
+    </div>
+
+    <button class="scan-cta" onclick="openScanModal()">
+      <div class="scan-cta-icon">&#9654;</div>
+      Scan item to record sale
+    </button>
+
+    <div class="stats-grid">
+      <div class="stat-card green">
+        <div class="stat-icon">INV</div>
+        <div class="stat-value" id="stat-stock">—</div>
+        <div class="stat-label">Items in stock</div>
+      </div>
+      <div class="stat-card gold">
+        <div class="stat-icon">TDY</div>
+        <div class="stat-value" id="stat-today">—</div>
+        <div class="stat-label">Sales today</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-icon">MTH</div>
+        <div class="stat-value" id="stat-month">—</div>
+        <div class="stat-label">Sales this month</div>
+      </div>
+      <div class="stat-card coral">
+        <div class="stat-icon">DUE</div>
+        <div class="stat-value" id="stat-dues">—</div>
+        <div class="stat-label">Dues pending</div>
+      </div>
+    </div>
+
+    <div class="section-card" id="section-inventory" style="display:none">
+      <div class="section-head">
+        <h3>Inventory</h3>
+        <span class="section-badge" id="low-stock-badge" style="display:none">Low stock</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="inv-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Category</th>
+              <th>Remaining</th>
+              <th>Stock level</th>
+            </tr>
+          </thead>
+          <tbody id="inv-tbody">
+            <tr><td colspan="4" class="empty">Loading inventory...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section-card" id="section-sales" style="display:none">
+      <div class="section-head"><h3>Sales history</h3></div>
+      <div class="sales-list" id="sales-list">
+        <div class="empty">Loading sales...</div>
+      </div>
+    </div>
+
+    <div id="section-payments" style="display:none">
+      <div class="dues-card">
+        <div class="stat-label">Total outstanding dues</div>
+        <div class="dues-amount" id="dues-total">&#8377;0</div>
+        <div class="dues-label">Please contact admin to arrange payment</div>
+        <div class="dues-breakdown" id="dues-breakdown"></div>
+      </div>
+    </div>
+
+  <div id="section-contact" style="display:none">
+
+  <div class="contact-card" id="btn-notify" onclick="notifyAdmin()">
+    <div class="contact-icon-wrap">&#9888;</div>
+    <div class="contact-text">
+      <h4>Notify admin</h4>
+      <p>Send an instant alert to the admin that you need assistance</p>
+    </div>
+    <div class="contact-arrow">&#8250;</div>
+  </div>
+
+  <div class="contact-card" onclick="openWhatsApp()">
+    <div class="contact-icon-wrap">&#9993;</div>
+    <div class="contact-text">
+      <h4>Message admin</h4>
+      <p>Opens WhatsApp with a pre-filled message to the admin</p>
+    </div>
+    <div class="contact-arrow">&#8250;</div>
+  </div>
+
+  <div class="contact-card" onclick="openReportModal()">
+    <div class="contact-icon-wrap">&#9873;</div>
+    <div class="contact-text">
+      <h4>Report an issue</h4>
+      <p>Submit a detailed report — wrong stock, missing items, damaged goods</p>
+    </div>
+    <div class="contact-arrow">&#8250;</div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="report-modal">
+  <div class="scan-modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Report an issue</div>
+
+    <div style="margin-bottom:10px">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">
+        Issue type
+      </label>
+      <select class="modal-input" id="issue-type" style="background:rgba(255,255,255,.06);color:var(--text)">
+        <option value="">Select issue type</option>
+        <option value="Wrong stock count">Wrong stock count</option>
+        <option value="Missing items">Missing items</option>
+        <option value="Damaged goods">Damaged goods</option>
+        <option value="Payment dispute">Payment dispute</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">
+        Description
+      </label>
+      <textarea
+        class="modal-input"
+        id="issue-description"
+        rows="5"
+        placeholder="Describe the issue in detail..."
+        style="resize:none;line-height:1.5"
+      ></textarea>
+    </div>
+
+    <div class="status-msg" id="report-status" style="
+      display:none;
+      padding:10px 14px;
+      border-radius:8px;
+      font-size:13px;
+      font-weight:500;
+      margin-bottom:12px;
+    "></div>
+
+    <button class="btn btn-confirm" id="btn-submit-report" onclick="submitReport()">
+      Submit report
+    </button>
+    <button class="btn btn-cancel" onclick="closeReportModal()" style="margin-top:8px">
+      Cancel
+    </button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="scan-modal">
+  <div class="scan-modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Scan item to sell</div>
+
+    <div id="camera-wrap">
+      <div class="viewfinder-wrap">
+        <div id="scanner-target"></div>
+        <div class="scan-overlay">
+          <div class="scan-frame"><div class="scan-line"></div></div>
+        </div>
+      </div>
+      <p class="scan-hint">Point camera at barcode — detects automatically</p>
+      <input class="modal-input" type="text" id="manual-barcode"
+        placeholder="Or type barcode manually..."
+        autocomplete="off" spellcheck="false"/>
+      <button class="btn btn-confirm" onclick="manualLookup()" style="margin-bottom:8px">
+        Look up product
+      </button>
+    </div>
+
+    <div class="confirm-card" id="confirm-card">
+      <div class="confirm-product">
+        <img class="confirm-img" id="confirm-img" src="" alt="Product"/>
+        <div>
+          <div class="confirm-name" id="confirm-name"></div>
+          <div class="confirm-meta" id="confirm-meta"></div>
+          <div class="confirm-price" id="confirm-price"></div>
+        </div>
+      </div>
+      <div class="qty-row">
+        <span class="qty-label">Quantity sold</span>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(-1)">&#8722;</button>
+          <span class="qty-display" id="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(1)">&#43;</button>
+        </div>
+      </div>
+      <button class="btn btn-confirm" id="btn-confirm-sale" onclick="confirmSale()">
+        Confirm sale
+      </button>
+    </div>
+
+    <button class="btn btn-cancel" onclick="closeScanModal()">Cancel</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API     = "https://cims-ss3i.onrender.com/api";
+  const token   = localStorage.getItem("cims_token");
+  const user    = JSON.parse(localStorage.getItem("cims_user") || "{}");
+  const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
+
+  let scannedProduct = null;
+  let saleQty        = 1;
+  let toastTimer;
+  let detectedHandler = null;
+
+  if (!token || !user || user.role !== "hotel_staff") {
+    window.location.href = "login.html";
+  }
+
+  window.addEventListener("load", () => {
+    document.getElementById("user-name").textContent     = user.name       || "Staff";
+    document.getElementById("user-avatar").textContent   = (user.name || "S").charAt(0).toUpperCase();
+    document.getElementById("user-hotel").textContent    = user.hotel_name || "Hotel";
+    document.getElementById("sidebar-hotel").textContent = user.hotel_name || "Hotel Dashboard";
+    document.getElementById("hotel-name-text").textContent = user.hotel_name || "";
+
+    const hour     = new Date().getHours();
+    const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+    document.getElementById("welcome-text").textContent = `${greeting}, ${(user.name || "").split(" ")[0]}`;
+    document.getElementById("date-text").textContent    = new Date().toLocaleDateString("en-IN", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+
+    updateClock();
+    setInterval(updateClock, 1000);
+    loadAll();
+  });
+
+  function updateClock() {
+    document.getElementById("topbar-time").textContent = new Date().toLocaleTimeString("en-IN", { hour:"2-digit", minute:"2-digit" });
+  }
+
+  async function loadAll() {
+    await Promise.all([loadStats(), loadInventory(), loadSales(), loadPayments()]);
+  }
+
+  async function loadStats() {
+    try {
+      const res  = await fetch(`${API}/hotel/stats`, { headers });
+      const data = await res.json();
+      if (!data.success) return;
+      document.getElementById("stat-stock").textContent = data.stats.stock ?? "0";
+      document.getElementById("stat-today").textContent = data.stats.today ?? "0";
+      document.getElementById("stat-month").textContent = data.stats.month ?? "0";
+      document.getElementById("stat-dues").textContent  = data.stats.dues
+        ? `\u20B9${(data.stats.dues / 1000).toFixed(0)}K` : "\u20B90";
+    } catch {}
+  }
+
+  async function loadInventory() {
+    const tbody = document.getElementById("inv-tbody");
+    try {
+      const res  = await fetch(`${API}/inventory/hotel/${user.hotel_id}`, { headers });
+      const data = await res.json();
+
+      if (!data.success || !data.inventory.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty">No inventory assigned yet</td></tr>`;
+        return;
+      }
+
+      const lowStock = data.inventory.filter(i => i.quantity_remaining <= 3 && i.quantity_remaining > 0);
+      if (lowStock.length) {
+        document.getElementById("low-stock-alert").classList.add("visible");
+        document.getElementById("low-stock-text").textContent = lowStock.map(i => i.products?.name).join(", ");
+        document.getElementById("low-stock-badge").style.display = "inline";
+      }
+
+      tbody.innerHTML = data.inventory.map(i => {
+        const remaining = i.quantity_remaining;
+        const assigned  = i.quantity_assigned;
+        const pct       = assigned > 0 ? Math.round((remaining / assigned) * 100) : 0;
+        const level     = pct > 40 ? "high" : pct > 10 ? "low" : "out";
+        const isLow     = remaining <= 3;
+        return `
+          <tr>
+            <td>
+              <strong>${i.products?.name ?? "—"}</strong><br/>
+              <span style="font-size:11px;color:var(--muted)">${i.products?.origin_country ?? ""}</span>
+            </td>
+            <td style="color:var(--muted);font-size:12px">${i.products?.category ?? "—"}</td>
+            <td>
+              <div class="stock-num ${isLow ? "low-stock" : ""}">
+                ${remaining} units${isLow ? " — Low" : ""}
+              </div>
+            </td>
+            <td>
+              <div class="stock-bar-wrap">
+                <div class="stock-bar ${level}" style="width:${pct}%"></div>
+              </div>
+            </td>
+          </tr>`;
+      }).join("");
+    } catch {
+      tbody.innerHTML = `<tr><td colspan="4" class="empty">Could not load inventory</td></tr>`;
+    }
+  }
+
+  async function loadSales() {
+    const list = document.getElementById("sales-list");
+    try {
+      const res  = await fetch(`${API}/sales/hotel/${user.hotel_id}`, { headers });
+      const data = await res.json();
+
+      if (!data.success || !data.sales.length) {
+        list.innerHTML = `<div class="empty">No sales recorded yet</div>`;
+        return;
+      }
+
+      list.innerHTML = data.sales.map(s => `
+        <div class="sale-item">
+          <div class="sale-dot"></div>
+          <div>
+            <div class="sale-name">${s.products?.name ?? "—"}</div>
+            <div class="sale-meta">${timeAgo(s.sold_at)} &middot; Qty: ${s.quantity_sold}</div>
+          </div>
+          <div class="sale-amount">\u20B9${Number(s.total_amount).toLocaleString()}</div>
+        </div>
+      `).join("");
+    } catch {
+      list.innerHTML = `<div class="empty">Could not load sales</div>`;
+    }
+  }
+
+  async function loadPayments() {
+    try {
+      const res  = await fetch(`${API}/payments/hotel/${user.hotel_id}`, { headers });
+      const data = await res.json();
+      if (!data.success) return;
+
+      const total = data.payments.reduce((s, p) => s + Number(p.amount), 0);
+      document.getElementById("dues-total").textContent = `\u20B9${total.toLocaleString()}`;
+      document.getElementById("dues-breakdown").innerHTML = data.payments.length
+        ? data.payments.map(p => `
+            <div class="dues-row">
+              <span>${p.notes || "Invoice"}</span>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span>\u20B9${Number(p.amount).toLocaleString()}</span>
+                <span class="dues-status ${p.status}">${p.status}</span>
+              </div>
+            </div>`).join("")
+        : `<div class="empty" style="padding:16px 0">No outstanding dues</div>`;
+    } catch {}
+  }
+
+  function showSection(section, btn) {
+    ["inventory","sales","payments","contact"].forEach(s => {
+      const el = document.getElementById(`section-${s}`);
+      if (el) el.style.display = "none";
+    });
+
+    const isDash = section === "dashboard";
+    document.querySelector(".welcome-banner").style.display   = isDash ? "flex" : "none";
+    document.querySelector(".scan-cta").style.display         = isDash ? "flex" : "none";
+    document.querySelector(".stats-grid").style.display       = isDash ? "grid" : "none";
+    document.getElementById("low-stock-alert").style.display  = isDash ? ""     : "none";
+
+    if (!isDash) {
+      const el = document.getElementById(`section-${section}`);
+      if (el) el.style.display = "block";
+    }
+
+    document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+    if (btn) btn.classList.add("active");
+
+    const titles = {
+      dashboard: "Dashboard",
+      inventory: "Inventory",
+      sales:     "Sales History",
+      payments:  "Payment Dues",
+      contact:   "Contact Admin",
+    };
+    document.getElementById("topbar-title").textContent = titles[section] || "Dashboard";
+    closeSidebar();
+  }
+
+  function openScanModal() {
+    document.getElementById("scan-modal").classList.add("visible");
+    startCamera();
+  }
+
+  function closeScanModal() {
+    document.getElementById("scan-modal").classList.remove("visible");
+    stopCamera();
+    resetConfirm();
+  }
+
+  let lastScan = ""; let lastTime = 0;
+
+  function startCamera() {
+    stopCamera();
+    Quagga.init({
+      inputStream: {
+        type: "LiveStream",
+        target: document.getElementById("scanner-target"),
+        constraints: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+      },
+      decoder: {
+        readers: ["code_128_reader","ean_reader","ean_8_reader","upc_reader","upc_e_reader","code_39_reader"],
+      },
+      locate: true,
+    }, (err) => {
+      if (err) { showToast("Camera access denied — use manual input", "error"); return; }
+      Quagga.start();
+    });
+
+    detectedHandler = result => {
+      const code = result.codeResult.code;
+      const now  = Date.now();
+      if (code === lastScan && now - lastTime < 2000) return;
+      lastScan = code; lastTime = now;
+      if (navigator.vibrate) navigator.vibrate(60);
+      lookupBarcode(code);
+    };
+    Quagga.onDetected(detectedHandler);
+  }
+
+  function stopCamera() {
+    if (detectedHandler) {
+      Quagga.offDetected(detectedHandler);
+      detectedHandler = null;
+    }
+    try { Quagga.stop(); } catch {}
+    const video = document.querySelector("#scanner-target video");
+    if (video?.srcObject) { video.srcObject.getTracks().forEach(t => t.stop()); video.srcObject = null; }
+  }
+
+  function manualLookup() {
+    const val = document.getElementById("manual-barcode").value.trim();
+    if (!val) return showToast("Please enter a barcode first", "error");
+    lookupBarcode(val);
+  }
+
+  document.getElementById("manual-barcode").addEventListener("keydown", e => {
+    if (e.key === "Enter") manualLookup();
+  });
+
+  async function lookupBarcode(barcode) {
+    try {
+      const res  = await fetch(`${API}/barcode/lookup/${encodeURIComponent(barcode)}`, { headers });
+      const data = await res.json();
+      if (!data.success) { showToast(data.message || "Product not found", "error"); return; }
+      scannedProduct = data.product;
+      stopCamera();
+      showConfirm(data.product);
+    } catch {
+      showToast("Cannot connect to server", "error");
+    }
+  }
+
+  function showConfirm(p) {
+    document.getElementById("camera-wrap").style.display = "none";
+    document.getElementById("confirm-card").classList.add("visible");
+    document.getElementById("confirm-name").textContent  = p.name;
+    document.getElementById("confirm-meta").textContent  = `${p.origin_country} \u00B7 ${p.category}`;
+    document.getElementById("confirm-price").textContent = `\u20B9${Number(p.unit_price).toLocaleString()} per unit`;
+    document.getElementById("confirm-img").src = p.image_url || "https://placehold.co/52x52?text=Item";
+    saleQty = 1;
+    document.getElementById("qty-display").textContent = 1;
+  }
+
+  function resetConfirm() {
+    scannedProduct = null; saleQty = 1;
+    document.getElementById("camera-wrap").style.display = "block";
+    document.getElementById("confirm-card").classList.remove("visible");
+    document.getElementById("manual-barcode").value      = "";
+    document.getElementById("qty-display").textContent   = 1;
+  }
+
+  function changeQty(delta) {
+    saleQty = Math.max(1, saleQty + delta);
+    document.getElementById("qty-display").textContent = saleQty;
+  }
+
+  async function confirmSale() {
+    if (!scannedProduct) return;
+    const btn = document.getElementById("btn-confirm-sale");
+    btn.disabled = true; btn.textContent = "Recording...";
+    try {
+      const res  = await fetch(`${API}/sales/record`, {
+        method: "POST", headers,
+        body: JSON.stringify({
+          product_id:  scannedProduct.id,
+          hotel_id:    user.hotel_id,
+          quantity:    saleQty,
+          sale_price:  scannedProduct.unit_price,
+          recorded_by: user.id,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Sale recorded — ${scannedProduct.name} x${saleQty}`);
+        if (navigator.vibrate) navigator.vibrate([40,30,40]);
+        closeScanModal();
+        loadAll();
+      } else {
+        showToast(data.message || "Failed to record sale", "error");
+      }
+    } catch {
+      showToast("Cannot connect to server", "error");
+    } finally {
+      btn.disabled = false; btn.textContent = "Confirm sale";
+    }
+  }
+
+  function openSidebar()  {
+    document.getElementById("sidebar").classList.add("open");
+    document.getElementById("sidebar-overlay").classList.add("visible");
+  }
+  function closeSidebar() {
+    document.getElementById("sidebar").classList.remove("open");
+    document.getElementById("sidebar-overlay").classList.remove("visible");
+  }
+
+  function logout() {
+    localStorage.removeItem("cims_token");
+    localStorage.removeItem("cims_user");
+    localStorage.removeItem("cims_role");
+    window.location.href = "login.html";
+  }
+
+  function showToast(msg, type = "") {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.className   = `toast visible ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("visible"), 3000);
+  }
+
+  function timeAgo(d) {
+    const value = String(d || "");
+    const timestamp = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value) ? value : `${value}Z`;
+    const diff = Math.floor((Date.now() - new Date(timestamp)) / 1000);
+    if (!Number.isFinite(diff)) return "—";
+    if (diff < 60)    return "just now";
+    if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  }
+
+  setInterval(loadAll, 60000);
+
+  const ADMIN_WHATSAPP = "917907356098";
+
+async function notifyAdmin() {
+  const btn = document.getElementById("btn-notify");
+  btn.style.opacity = "0.6";
+  btn.style.pointerEvents = "none";
+
+  try {
+    const res  = await fetch(`${API}/hotel/assist`, {
+      method:  "POST",
+      headers,
+      body: JSON.stringify({
+        hotel_id:   user.hotel_id,
+        hotel_name: user.hotel_name,
+        message:    "Need assistance",
+        user_id:    user.id,
+      }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      showToast("Admin has been notified successfully");
+    } else {
+      showToast(data.message || "Could not notify admin", "error");
+    }
+  } catch {
+    showToast("Cannot connect to server", "error");
+  } finally {
+    setTimeout(() => {
+      btn.style.opacity      = "1";
+      btn.style.pointerEvents = "auto";
+    }, 3000);
+  }
+}
+
+function openWhatsApp() {
+  const message = encodeURIComponent(
+    `Need assistance — ${user.hotel_name} (Hotel ID: ${user.hotel_id})`
+  );
+  window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${message}`, "_blank");
+}
+
+function openReportModal() {
+  document.getElementById("report-modal").classList.add("visible");
+  document.getElementById("issue-type").value        = "";
+  document.getElementById("issue-description").value = "";
+  document.getElementById("report-status").style.display = "none";
+}
+
+function closeReportModal() {
+  document.getElementById("report-modal").classList.remove("visible");
+}
+
+async function submitReport() {
+  const type        = document.getElementById("issue-type").value.trim();
+  const description = document.getElementById("issue-description").value.trim();
+  const statusEl    = document.getElementById("report-status");
+  const btn         = document.getElementById("btn-submit-report");
+
+  if (!type)        return showReportStatus("Please select an issue type.", "error");
+  if (!description) return showReportStatus("Please describe the issue.", "error");
+  if (description.length < 10) return showReportStatus("Please provide more detail.", "error");
+
+  btn.disabled     = true;
+  btn.textContent  = "Submitting...";
+
+  try {
+    const res  = await fetch(`${API}/hotel/assist`, {
+      method:  "POST",
+      headers,
+      body: JSON.stringify({
+        hotel_id:   user.hotel_id,
+        hotel_name: user.hotel_name,
+        message:    `${type} — ${description}`,
+        user_id:    user.id,
+      }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      showReportStatus("Report submitted. Admin has been notified.", "success");
+      setTimeout(() => closeReportModal(), 2000);
+    } else {
+      showReportStatus(data.message || "Submission failed.", "error");
+    }
+  } catch {
+    showReportStatus("Cannot connect to server.", "error");
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = "Submit report";
+  }
+}
+
+function showReportStatus(msg, type) {
+  const el = document.getElementById("report-status");
+  el.textContent    = msg;
+  el.style.display  = "block";
+  el.style.background = type === "success"
+    ? "rgba(77,184,158,.15)"  : "rgba(224,123,115,.15)";
+  el.style.color    = type === "success"
+    ? "var(--accent-dk)"      : "var(--coral)";
+  el.style.border   = type === "success"
+    ? "1px solid rgba(77,184,158,.3)" : "1px solid rgba(224,123,115,.3)";
+}
+
+</script>
+<script src="sanitize.js"></script>
+</body>
+</html>

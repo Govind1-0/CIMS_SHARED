@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#1a1a2e"/>
+  <title>CIMS — Products</title>
+  <style>
+    html, body {
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    html { min-height: 100%; }
+    body { min-height: 100%; }
+
+    button, input, select, textarea { font: inherit; }
+
+    @supports (-webkit-touch-callout: none) {
+      body { min-height: -webkit-fill-available; }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:       #1a1a2e;
+      --navy-mid:   #16213e;
+      --navy-light: #1e2a45;
+      --gold:       #f9f7f4;
+      --gold-dk:    #fcfcfc;
+      --gold-pale:  rgba(226,185,111,.1);
+      --accent:     #4db89e;
+      --coral:      #e07b73;
+      --text:       #e8e8f4;
+      --muted:      rgba(232,232,244,.5);
+      --border:     rgba(255,255,255,.08);
+      --card-bg:    rgba(255,255,255,.04);
+      --card-hover: rgba(255,255,255,.07);
+      --radius:     14px;
+      --sidebar-w:  240px;
+    }
+    html, body { height: 100%; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--navy); color: var(--text); display: flex; min-height: 100dvh; }
+
+    .sidebar { width: var(--sidebar-w); background: var(--navy-mid); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 50; transition: transform .25s ease; }
+    .sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid var(--border); }
+    .sidebar-logo .mark { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, var(--gold), var(--gold-dk)); font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 10px; }
+    .sidebar-logo h1 { font-size: 16px; font-weight: 700; }
+    .sidebar-logo p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+    .nav-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); padding: 12px 10px 6px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all .15s; border: none; background: none; width: 100%; text-align: left; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+    .nav-item:hover  { background: var(--card-bg); color: var(--text); }
+    .nav-item.active { background: var(--gold-pale); color: var(--gold); font-weight: 600; }
+    .nav-item .icon  { width: 20px; text-align: center; flex-shrink: 0; font-style: normal; }
+    .sidebar-footer { padding: 16px 10px; border-top: 1px solid var(--border); }
+    .user-pill { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; background: var(--card-bg); }
+    .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), var(--gold-dk)); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--navy); flex-shrink: 0; }
+    .user-info .name { font-size: 13px; font-weight: 600; }
+    .user-info .role { font-size: 11px; color: var(--muted); }
+    .logout-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 4px; transition: color .15s; flex-shrink: 0; margin-left: auto; }
+    .logout-btn:hover { color: var(--coral); }
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 40; }
+    .sidebar-overlay.visible { display: block; }
+
+    .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100dvh; }
+    .topbar { display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-bottom: 1px solid var(--border); background: rgba(26,26,46,.8); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 30; }
+    .topbar-menu { display: none; background: none; border: none; color: var(--text); font-size: 20px; cursor: pointer; padding: 4px; }
+    .topbar-title { font-size: 16px; font-weight: 600; flex: 1; }
+    .btn-primary { padding: 10px 18px; border: none; border-radius: 9px; background: linear-gradient(135deg, var(--gold), var(--gold-dk)); color: var(--navy); font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s; white-space: nowrap; }
+    .btn-primary:hover { opacity: .9; }
+
+    .content { padding: 24px; flex: 1; }
+    .page-header { margin-bottom: 20px; }
+    .page-header h2 { font-size: 22px; font-weight: 700; }
+    .page-header p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+    .stat-mini { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; position: relative; overflow: hidden; }
+    .stat-mini::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+    .stat-mini.gold::before   { background: linear-gradient(90deg, var(--gold), transparent); }
+    .stat-mini.teal::before   { background: linear-gradient(90deg, var(--accent), transparent); }
+    .stat-mini.purple::before { background: linear-gradient(90deg, #a29bf0, transparent); }
+    .stat-mini-val { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .stat-mini.gold   .stat-mini-val { color: var(--gold); }
+    .stat-mini.teal   .stat-mini-val { color: var(--accent); }
+    .stat-mini.purple .stat-mini-val { color: #a29bf0; }
+    .stat-mini-lbl { font-size: 11px; color: var(--muted); font-weight: 500; }
+
+    .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .search-wrap { position: relative; flex: 1; min-width: 200px; }
+    .search-wrap input { width: 100%; padding: 10px 14px 10px 36px; background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 9px; color: var(--text); font-size: 14px; outline: none; transition: border-color .15s; }
+    .search-wrap input:focus { border-color: var(--gold); }
+    .search-wrap input::placeholder { color: var(--muted); }
+    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; }
+    .filter-select { padding: 10px 14px; background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 9px; color: var(--text); font-size: 13px; outline: none; cursor: pointer;}
+    .filter-select:focus { border-color: var(--gold); }
+
+    .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+
+    .product-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: background .15s; }
+    .product-card:hover { background: var(--card-hover); }
+    .product-img { width: 100%; height: 160px; object-fit: cover; background: var(--navy-light); display: block; }
+    .product-img-placeholder { width: 100%; height: 160px; background: var(--navy-light); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--muted); }
+    .product-body { padding: 14px; }
+    .product-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .product-meta { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    .product-row  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .product-price { font-size: 15px; font-weight: 700; color: var(--gold); }
+    .product-sku   { font-size: 11px; color: var(--muted); }
+    .barcode-img   { width: 100%; height: 44px; object-fit: contain; background: #fff; border-radius: 6px; padding: 4px; margin-bottom: 10px; }
+    .product-actions { display: flex; gap: 6px; }
+    .action-btn { flex: 1; padding: 7px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--card-bg); color: var(--muted); transition: all .15s; text-align: center; }
+    .action-btn.edit       { color: #a29bf0; border-color: rgba(162,155,240,.2); }
+    .action-btn.edit:hover { background: rgba(162,155,240,.1); }
+    .action-btn.delete       { color: var(--coral); border-color: rgba(224,123,115,.2); }
+    .action-btn.delete:hover { background: rgba(224,123,115,.15); }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.visible { display: flex; }
+    .modal { background: var(--navy-mid); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 24px; width: 100%; max-width: 480px; animation: fadeUp .2s ease; max-height: 90dvh; overflow-y: auto; }
+    @keyframes fadeUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+    .field input, .field select, .field textarea { width: 100%; padding: 11px 14px; background: rgba(255,255,255,.06); border: 1.5px solid var(--border); border-radius: 9px; color: var(--text); font-size: 14px; outline: none; transition: border-color .15s; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold); }
+    .field input::placeholder, .field textarea::placeholder { color: var(--muted); }
+    .field textarea { resize: none; line-height: 1.5; }
+    .field select option { background: var(--navy-mid); }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .modal-err { padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; margin-bottom: 14px; display: none; background: rgba(224,123,115,.15); color: var(--coral); border: 1px solid rgba(224,123,115,.3); }
+    .modal-err.visible { display: block; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .modal-btn { flex: 1; padding: 12px; border: none; border-radius: 9px; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+    .modal-btn.confirm { background: linear-gradient(135deg, var(--gold), var(--gold-dk)); color: var(--navy); }
+    .modal-btn.cancel  { background: var(--card-bg); color: var(--muted); border: 1px solid var(--border); }
+    .modal-btn.danger  { background: linear-gradient(135deg, #c0534a, #9e3d35); color: #fff; }
+    .modal-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .confirm-text { font-size: 14px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+    .confirm-text strong { color: var(--text); }
+
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--navy-light); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: 10px; padding: 12px 16px; font-size: 13px; font-weight: 500; z-index: 200; transform: translateY(80px); opacity: 0; transition: all .3s cubic-bezier(.4,0,.2,1); max-width: 300px; }
+    .toast.visible  { transform: translateY(0); opacity: 1; }
+    .toast.success  { border-left-color: var(--accent); }
+    .toast.error    { border-left-color: var(--coral); }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .topbar-menu { display: block; }
+      .stats-row { grid-template-columns: repeat(3, 1fr); }
+      .content { padding: 16px; }
+      .field-row { grid-template-columns: 1fr; }
+      .products-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 480px) {
+      .products-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .content { padding: 12px; }
+
+      .topbar  { padding: 12px 14px; }
+
+      .modal   { padding: 20px 16px; margin: 0 8px; }
+
+      table    { font-size: 12px; }
+      table th,
+      table td { padding: 10px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="mark">C</div>
+    <h1>CIMS</h1>
+    <p>Admin Dashboard</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">Overview</div>
+    <a class="nav-item" href="admin.html"><i class="icon">&#9679;</i> Dashboard</a>
+    <div class="nav-label">Inventory</div>
+    <a class="nav-item" href="index.html"><i class="icon">&#9679;</i> Add Stock</a>
+    <div class="nav-label">Business</div>
+    <a class="nav-item" href="hotels.html"><i class="icon">&#9679;</i> Hotels</a>
+    <a class="nav-item" href="payment.html"><i class="icon">&#9679;</i> Payments</a>
+    <a class="nav-item" href="sales.html"><i class="icon">&#9679;</i> Sales</a>
+    <a class="nav-item" href="staff.html"><i class="icon">&#9679;</i> Staff</a>
+    <a class="nav-item active" href="products.html"><i class="icon">&#9679;</i> Products</a>
+    <a class="nav-item" href="reports.html"><i class="icon">&#9679;</i> Reports</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="user-avatar" id="user-avatar">A</div>
+      <div class="user-info">
+        <div class="name" id="user-name">Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+      <button class="logout-btn" onclick="logout()">&#8618;</button>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <button class="topbar-menu" onclick="openSidebar()">&#9776;</button>
+    <div class="topbar-title">Products</div>
+    <button class="btn-primary" onclick="openAddModal()">+ Add product</button>
+  </div>
+
+  <div class="content">
+    <div class="page-header">
+      <h2>Product catalog</h2>
+      <p>Manage all ethnic luxury goods — add barcodes, SKUs, pricing and images.</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-mini gold">
+        <div class="stat-mini-val" id="stat-total">—</div>
+        <div class="stat-mini-lbl">Total products</div>
+      </div>
+      <div class="stat-mini teal">
+        <div class="stat-mini-val" id="stat-categories">—</div>
+        <div class="stat-mini-lbl">Categories</div>
+      </div>
+      <div class="stat-mini purple">
+        <div class="stat-mini-val" id="stat-avg">—</div>
+        <div class="stat-mini-lbl">Avg. unit price</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">&#9906;</span>
+        <input type="text" id="search-input" placeholder="Search by name, SKU, barcode or origin..." oninput="filterProducts()"/>
+      </div>
+      <select class="filter-select" id="category-filter" onchange="filterProducts()">
+        <option value="">All categories</option>
+      </select>
+    </div>
+
+    <div class="products-grid" id="products-grid">
+      <div style="grid-column:1/-1;padding:60px;text-align:center;color:var(--muted)">Loading products...</div>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-overlay" id="product-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Add product</div>
+    <div class="modal-err" id="modal-err"></div>
+
+    <div class="field">
+      <label>Product name</label>
+      <input type="text" id="f-name" placeholder="e.g. Kashmiri Pashmina Shawl"/>
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="f-desc" rows="2" placeholder="Optional description"></textarea>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Origin country</label>
+        <input type="text" id="f-origin" placeholder="e.g. India"/>
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <input type="text" id="f-category" placeholder="e.g. Textiles"/>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Barcode</label>
+        <input type="text" id="f-barcode" placeholder="Scan or type"/>
+      </div>
+      <div class="field">
+        <label>SKU</label>
+        <input type="text" id="f-sku" placeholder="e.g. KSH-001"/>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Unit price (&#8377;)</label>
+        <input type="number" id="f-price" placeholder="0" inputmode="decimal"/>
+      </div>
+      <div class="field">
+        <label>Image URL</label>
+        <input type="text" id="f-image" placeholder="https://..."/>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeProductModal()">Cancel</button>
+      <button class="modal-btn confirm" id="modal-save-btn" onclick="saveProduct()">Save product</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <div class="modal-title">Delete product</div>
+    <div class="confirm-text">
+      Are you sure you want to delete <strong id="delete-product-name"></strong>?
+      This will remove the product from the catalog permanently.
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeDeleteModal()">Cancel</button>
+      <button class="modal-btn danger" id="btn-confirm-delete" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API     = "https://cims-ss3i.onrender.com/api";
+  const token   = localStorage.getItem("cims_token");
+  const user    = JSON.parse(localStorage.getItem("cims_user") || "{}");
+  const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
+
+  let allProducts = [];
+  let editingId   = null;
+  let deletingId  = null;
+  let toastTimer;
+
+  if (!token || !user || user.role !== "admin") {
+    window.location.href = "login.html";
+  }
+
+  window.addEventListener("load", () => {
+    document.getElementById("user-name").textContent   = user.name || "Admin";
+    document.getElementById("user-avatar").textContent = (user.name || "A").charAt(0).toUpperCase();
+    loadProducts();
+  });
+
+  async function loadProducts() {
+    try {
+      const res  = await fetch(`${API}/products`, { headers });
+      const data = await res.json();
+      if (!data.success) return;
+      allProducts = data.products;
+      renderStats(data.products);
+      populateCategoryFilter(data.products);
+      renderGrid(data.products);
+    } catch { showToast("Could not load products", "error"); }
+  }
+
+  function renderStats(products) {
+    const categories = new Set(products.map(p => p.category).filter(Boolean)).size;
+    const avg        = products.length
+      ? Math.round(products.reduce((s, p) => s + Number(p.unit_price), 0) / products.length)
+      : 0;
+    document.getElementById("stat-total").textContent      = products.length;
+    document.getElementById("stat-categories").textContent = categories;
+    document.getElementById("stat-avg").textContent        = avg ? `\u20B9${avg.toLocaleString()}` : "\u20B90";
+  }
+
+  function populateCategoryFilter(products) {
+    const categories = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
+    const sel = document.getElementById("category-filter");
+    sel.innerHTML = `<option value="">All categories</option>`;
+    categories.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c; opt.textContent = c;
+      sel.appendChild(opt);
+    });
+  }
+
+  function renderGrid(products) {
+    const grid = document.getElementById("products-grid");
+    if (!products.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;padding:60px;text-align:center;color:var(--muted)">No products found. Add your first product.</div>`;
+      return;
+    }
+    grid.innerHTML = products.map(p => `
+      <div class="product-card">
+        ${p.image_url
+          ? `<img class="product-img" src="${p.image_url}" alt="${p.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+             <div class="product-img-placeholder" style="display:none">No image</div>`
+          : `<div class="product-img-placeholder">No image</div>`
+        }
+        <div class="product-body">
+          <div class="product-name">${p.name}</div>
+          <div class="product-meta">${[p.origin_country, p.category].filter(Boolean).join(" &middot; ")}</div>
+          <div class="product-row">
+            <span class="product-price">\u20B9${Number(p.unit_price).toLocaleString()}</span>
+            <span class="product-sku">SKU: ${p.sku || "—"}</span>
+          </div>
+          ${p.barcode
+            ? `<img class="barcode-img" src="${API}/barcode/generate/${encodeURIComponent(String(p.barcode))}" alt="Barcode" onerror="this.replaceWith(Object.assign(document.createElement('div'), {className:'barcode-error', textContent:'Barcode unavailable'}))"/>`
+            : ""
+          }
+          <div class="product-actions">
+            <button class="action-btn edit" onclick="openEditModal('${p.id}')">Edit</button>
+            <button class="action-btn delete" onclick="openDeleteModal('${p.id}', '${p.name.replace(/'/g,"\\'")}')">Delete</button>
+          </div>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  function filterProducts() {
+    const q        = document.getElementById("search-input").value.toLowerCase();
+    const category = document.getElementById("category-filter").value;
+    renderGrid(allProducts.filter(p =>
+      (!category || p.category === category) &&
+      (!q ||
+        p.name.toLowerCase().includes(q) ||
+        (p.sku || "").toLowerCase().includes(q) ||
+        (p.barcode || "").toLowerCase().includes(q) ||
+        (p.origin_country || "").toLowerCase().includes(q)
+      )
+    ));
+  }
+
+  function openAddModal() {
+    editingId = null;
+    document.getElementById("modal-title").textContent    = "Add product";
+    document.getElementById("modal-save-btn").textContent = "Save product";
+    document.getElementById("modal-err").classList.remove("visible");
+    ["f-name","f-desc","f-origin","f-category","f-barcode","f-sku","f-price","f-image"].forEach(id => {
+      document.getElementById(id).value = "";
+    });
+    document.getElementById("product-modal").classList.add("visible");
+  }
+
+  function openEditModal(id) {
+    const p = allProducts.find(p => p.id === id);
+    if (!p) return;
+    editingId = id;
+    document.getElementById("modal-title").textContent    = "Edit product";
+    document.getElementById("modal-save-btn").textContent = "Save changes";
+    document.getElementById("modal-err").classList.remove("visible");
+    document.getElementById("f-name").value     = p.name            || "";
+    document.getElementById("f-desc").value     = p.description     || "";
+    document.getElementById("f-origin").value   = p.origin_country  || "";
+    document.getElementById("f-category").value = p.category        || "";
+    document.getElementById("f-barcode").value  = p.barcode         || "";
+    document.getElementById("f-sku").value      = p.sku             || "";
+    document.getElementById("f-price").value    = p.unit_price      || "";
+    document.getElementById("f-image").value    = p.image_url       || "";
+    document.getElementById("product-modal").classList.add("visible");
+  }
+
+  function closeProductModal() {
+    document.getElementById("product-modal").classList.remove("visible");
+    editingId = null;
+  }
+
+  async function saveProduct() {
+    const name     = document.getElementById("f-name").value.trim();
+    const barcode  = document.getElementById("f-barcode").value.trim();
+    const sku      = document.getElementById("f-sku").value.trim();
+
+    if (!name)    return showModalErr("Product name is required.");
+    if (!barcode) return showModalErr("Barcode is required.");
+    if (!sku)     return showModalErr("SKU is required.");
+
+    const body = {
+      name,
+      description:    document.getElementById("f-desc").value.trim(),
+      origin_country: document.getElementById("f-origin").value.trim(),
+      category:       document.getElementById("f-category").value.trim(),
+      barcode,
+      sku,
+      unit_price:     parseFloat(document.getElementById("f-price").value) || 0,
+      image_url:      document.getElementById("f-image").value.trim(),
+    };
+
+    const btn = document.getElementById("modal-save-btn");
+    btn.disabled = true; btn.textContent = "Saving...";
+
+    try {
+      const url    = editingId ? `${API}/products/${editingId}` : `${API}/products/add`;
+      const method = editingId ? "PUT" : "POST";
+      const res    = await fetch(url, { method, headers, body: JSON.stringify(body) });
+      const data   = await res.json();
+
+      if (data.success) {
+        closeProductModal();
+        showToast(editingId ? "Product updated" : "Product added", "success");
+        loadProducts();
+      } else {
+        showModalErr(data.message || "Failed to save product.");
+      }
+    } catch { showModalErr("Cannot connect to server."); }
+    finally  { btn.disabled = false; btn.textContent = editingId ? "Save changes" : "Save product"; }
+  }
+
+  function openDeleteModal(id, name) {
+    deletingId = id;
+    document.getElementById("delete-product-name").textContent = name;
+    document.getElementById("delete-modal").classList.add("visible");
+  }
+
+  function closeDeleteModal() {
+    document.getElementById("delete-modal").classList.remove("visible");
+    deletingId = null;
+  }
+
+  async function confirmDelete() {
+    if (!deletingId) return;
+    const btn = document.getElementById("btn-confirm-delete");
+    btn.disabled = true; btn.textContent = "Deleting...";
+    try {
+      const res  = await fetch(`${API}/products/${deletingId}`, { method: "DELETE", headers });
+      const data = await res.json();
+      if (data.success) { closeDeleteModal(); showToast("Product deleted", "success"); loadProducts(); }
+      else showToast(data.message || "Failed", "error");
+    } catch { showToast("Cannot connect to server", "error"); }
+    finally  { btn.disabled = false; btn.textContent = "Delete"; }
+  }
+
+  function showModalErr(msg) {
+    const el = document.getElementById("modal-err");
+    el.textContent = msg; el.classList.add("visible");
+  }
+
+  function openSidebar()  { document.getElementById("sidebar").classList.add("open"); document.getElementById("sidebar-overlay").classList.add("visible"); }
+  function closeSidebar() { document.getElementById("sidebar").classList.remove("open"); document.getElementById("sidebar-overlay").classList.remove("visible"); }
+
+  function logout() {
+    localStorage.removeItem("cims_token");
+    localStorage.removeItem("cims_user");
+    localStorage.removeItem("cims_role");
+    window.location.href = "login.html";
+  }
+
+  function showToast(msg, type = "") {
+    const el = document.getElementById("toast");
+    el.textContent = msg; el.className = `toast visible ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("visible"), 3000);
+  }
+</script>
+<script src="sanitize.js"></script>
+<script src="timeout.js"></script>
+</body>
+</html>

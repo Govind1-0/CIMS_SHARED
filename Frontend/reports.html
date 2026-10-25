@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#1a1a2e"/>
+  <title>CIMS — Reports</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    html, body {
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    html { min-height: 100%; }
+    body { min-height: 100%; }
+
+    button, input, select, textarea { font: inherit; }
+
+    @supports (-webkit-touch-callout: none) {
+      body { min-height: -webkit-fill-available; }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:       #1a1a2e;
+      --navy-mid:   #16213e;
+      --navy-light: #1e2a45;
+      --gold:       #fcfcfc;
+      --gold-dk:    #f1f0f0;
+      --gold-pale:  rgba(226,185,111,.1);
+      --accent:     #4db89e;
+      --coral:      #e07b73;
+      --purple:     #a29bf0;
+      --text:       #e8e8f4;
+      --muted:      rgba(232,232,244,.5);
+      --border:     rgba(255,255,255,.08);
+      --card-bg:    rgba(255,255,255,.04);
+      --card-hover: rgba(255,255,255,.07);
+      --radius:     14px;
+      --sidebar-w:  240px;
+    }
+    html, body { height: 100%; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--navy); color: var(--text); display: flex; min-height: 100dvh; }
+
+    .sidebar { width: var(--sidebar-w); background: var(--navy-mid); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 50; transition: transform .25s ease; }
+    .sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid var(--border); }
+    .sidebar-logo .mark { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, var(--gold), var(--gold-dk)); font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 10px; }
+    .sidebar-logo h1 { font-size: 16px; font-weight: 700; }
+    .sidebar-logo p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+    .nav-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); padding: 12px 10px 6px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all .15s; border: none; background: none; width: 100%; text-align: left; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+    .nav-item:hover  { background: var(--card-bg); color: var(--text); }
+    .nav-item.active { background: var(--gold-pale); color: var(--gold); font-weight: 600; }
+    .nav-item .icon  { width: 20px; text-align: center; flex-shrink: 0; font-style: normal; }
+    .sidebar-footer { padding: 16px 10px; border-top: 1px solid var(--border); }
+    .user-pill { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; background: var(--card-bg); }
+    .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), var(--gold-dk)); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--navy); flex-shrink: 0; }
+    .user-info .name { font-size: 13px; font-weight: 600; }
+    .user-info .role { font-size: 11px; color: var(--muted); }
+    .logout-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 4px; transition: color .15s; flex-shrink: 0; margin-left: auto; }
+    .logout-btn:hover { color: var(--coral); }
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 40; }
+    .sidebar-overlay.visible { display: block; }
+
+    .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100dvh; }
+    .topbar { display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-bottom: 1px solid var(--border); background: rgba(26,26,46,.8); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 30; }
+    .topbar-menu { display: none; background: none; border: none; color: var(--text); font-size: 20px; cursor: pointer; padding: 4px; }
+    .topbar-title { font-size: 16px; font-weight: 600; flex: 1; }
+
+    .btn-primary { padding: 10px 18px; border: none; border-radius: 9px; background: linear-gradient(135deg, var(--gold), var(--gold-dk)); color: var(--navy); font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s; white-space: nowrap; }
+    .btn-primary:hover { opacity: .9; }
+
+    .content { padding: 24px; flex: 1; }
+    .page-header { margin-bottom: 20px; }
+    .page-header h2 { font-size: 22px; font-weight: 700; }
+    .page-header p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    .filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .filter-select { padding: 10px 14px; background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 9px; color: var(--text); font-size: 13px; outline: none; cursor: pointer; }
+    .filter-select:focus { border-color: var(--gold); }
+    .filter-select option { background: var(--navy-mid); }
+    .filter-label { font-size: 13px; color: var(--muted); }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; position: relative; overflow: hidden; }
+    .stat-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+    .stat-card.gold::before   { background: linear-gradient(90deg, var(--gold), transparent); }
+    .stat-card.teal::before   { background: linear-gradient(90deg, var(--accent), transparent); }
+    .stat-card.coral::before  { background: linear-gradient(90deg, var(--coral), transparent); }
+    .stat-card.purple::before { background: linear-gradient(90deg, var(--purple), transparent); }
+    .stat-val { font-size: 28px; font-weight: 700; margin-bottom: 4px; line-height: 1; }
+    .stat-card.gold   .stat-val { color: var(--gold); }
+    .stat-card.teal   .stat-val { color: var(--accent); }
+    .stat-card.coral  .stat-val { color: var(--coral); }
+    .stat-card.purple .stat-val { color: var(--purple); }
+    .stat-lbl { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+    .section-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+    .section-head h3 { font-size: 14px; font-weight: 600; }
+
+    .chart-wrap { padding: 16px; position: relative; height: 220px; }
+
+    .table-wrap { overflow-x: auto; }
+    .report-table { width: 100%; border-collapse: collapse; }
+    .report-table th { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; padding: 10px 18px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .report-table td { padding: 12px 18px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,.04); }
+    .report-table tr:last-child td { border-bottom: none; }
+    .report-table tr:hover td { background: var(--card-hover); }
+
+    .rank-num { font-size: 12px; font-weight: 700; color: var(--muted); width: 24px; }
+    .rank-1 { color: var(--gold); }
+    .rank-2 { color: var(--text); }
+    .rank-3 { color: #c0956e; }
+
+    .amount-cell { font-weight: 600; color: var(--accent); }
+    .dues-cell   { font-weight: 600; color: var(--coral); }
+    .dues-cell.clear { color: var(--accent); }
+
+    .status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .status-pill.paid    { background: rgba(77,184,158,.15); color: var(--accent); }
+    .status-pill.pending { background: rgba(226,185,111,.15); color: var(--gold); }
+    .status-pill.overdue { background: rgba(224,123,115,.15); color: var(--coral); }
+
+    .empty { padding: 40px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    .export-btn { padding: 8px 14px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .export-btn:hover { background: var(--card-hover); color: var(--text); }
+
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--navy-light); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: 10px; padding: 12px 16px; font-size: 13px; font-weight: 500; z-index: 200; transform: translateY(80px); opacity: 0; transition: all .3s cubic-bezier(.4,0,.2,1); max-width: 300px; }
+    .toast.visible  { transform: translateY(0); opacity: 1; }
+    .toast.success  { border-left-color: var(--accent); }
+    .toast.error    { border-left-color: var(--coral); }
+
+    @media (max-width: 1100px) { .two-col { grid-template-columns: 1fr; } .three-col { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .topbar-menu { display: block; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .three-col { grid-template-columns: 1fr; }
+      .content { padding: 16px; }
+    }
+
+    @media (max-width: 480px) {
+      .stats-grid  { grid-template-columns: 1fr 1fr; }
+      .two-col     { grid-template-columns: 1fr; }
+      .three-col   { grid-template-columns: 1fr; }
+
+      .chart-wrap  { height: 160px; }
+
+      .report-table th:nth-child(3),
+      .report-table td:nth-child(3) { display: none; }
+
+      .filter-bar  { flex-direction: column; }
+      .filter-select { width: 100%; }
+
+      .stat-val    { font-size: 20px; }
+    }
+    @media (max-width: 480px) {
+      .content { padding: 12px; }
+
+      .topbar  { padding: 12px 14px; }
+
+      .modal   { padding: 20px 16px; margin: 0 8px; }
+
+      table    { font-size: 12px; }
+      table th,
+      table td { padding: 10px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="mark">C</div>
+    <h1>CIMS</h1>
+    <p>Admin Dashboard</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">Overview</div>
+    <a class="nav-item" href="admin.html"><i class="icon">&#9679;</i> Dashboard</a>
+    <div class="nav-label">Inventory</div>
+    <a class="nav-item" href="index.html"><i class="icon">&#9679;</i> Add Stock</a>
+    <div class="nav-label">Business</div>
+    <a class="nav-item" href="hotels.html"><i class="icon">&#9679;</i> Hotels</a>
+    <a class="nav-item" href="payment.html"><i class="icon">&#9679;</i> Payments</a>
+    <a class="nav-item" href="sales.html"><i class="icon">&#9679;</i> Sales</a>
+    <a class="nav-item" href="staff.html"><i class="icon">&#9679;</i> Staff</a>
+    <a class="nav-item" href="products.html"><i class="icon">&#9679;</i> Products</a>
+    <a class="nav-item active" href="reports.html"><i class="icon">&#9679;</i> Reports</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="user-avatar" id="user-avatar">A</div>
+      <div class="user-info">
+        <div class="name" id="user-name">Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+      <button class="logout-btn" onclick="logout()">&#8618;</button>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <button class="topbar-menu" onclick="openSidebar()">&#9776;</button>
+    <div class="topbar-title">Reports</div>
+    <button class="export-btn" onclick="exportCSV()">Export CSV</button>
+  </div>
+
+  <div class="content">
+    <div class="page-header">
+      <h2>Reports &amp; Analytics</h2>
+      <p>Sales performance, payment dues, and inventory overview across all hotels.</p>
+    </div>
+
+    <div class="filter-bar">
+      <span class="filter-label">Period:</span>
+      <select class="filter-select" id="period-filter" onchange="loadAll()">
+        <option value="7">Last 7 days</option>
+        <option value="30" selected>Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="365">Last year</option>
+      </select>
+      <select class="filter-select" id="hotel-filter" onchange="loadAll()">
+        <option value="">All hotels</option>
+      </select>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card gold">
+        <div class="stat-val" id="stat-revenue">&#8377;0</div>
+        <div class="stat-lbl">Total revenue</div>
+      </div>
+      <div class="stat-card teal">
+        <div class="stat-val" id="stat-sales">0</div>
+        <div class="stat-lbl">Total sales</div>
+      </div>
+      <div class="stat-card coral">
+        <div class="stat-val" id="stat-dues">&#8377;0</div>
+        <div class="stat-lbl">Outstanding dues</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-val" id="stat-avg">&#8377;0</div>
+        <div class="stat-lbl">Avg. sale value</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="section-card">
+        <div class="section-head"><h3>Revenue over time</h3></div>
+        <div class="chart-wrap"><canvas id="revenue-chart"></canvas></div>
+      </div>
+      <div class="section-card">
+        <div class="section-head"><h3>Sales by hotel</h3></div>
+        <div class="chart-wrap"><canvas id="hotel-chart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="section-card">
+        <div class="section-head"><h3>Top performing hotels</h3></div>
+        <div class="table-wrap">
+          <table class="report-table">
+            <thead><tr><th>#</th><th>Hotel</th><th>Sales</th><th>Revenue</th></tr></thead>
+            <tbody id="top-hotels-tbody"><tr><td colspan="4" class="empty">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section-card">
+        <div class="section-head"><h3>Top selling products</h3></div>
+        <div class="table-wrap">
+          <table class="report-table">
+            <thead><tr><th>#</th><th>Product</th><th>Units sold</th><th>Revenue</th></tr></thead>
+            <tbody id="top-products-tbody"><tr><td colspan="4" class="empty">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-head">
+        <h3>Payment dues by hotel</h3>
+        <button class="export-btn" onclick="exportDuesCSV()">Export dues</button>
+      </div>
+      <div class="table-wrap">
+        <table class="report-table">
+          <thead><tr><th>Hotel</th><th>Pending amount</th><th>Status</th></tr></thead>
+          <tbody id="dues-tbody"><tr><td colspan="3" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-head">
+        <h3>All sales</h3>
+        <button class="export-btn" onclick="exportSalesCSV()">Export sales</button>
+      </div>
+      <div class="table-wrap">
+        <table class="report-table">
+          <thead><tr><th>Product</th><th>Hotel</th><th>Qty</th><th>Amount</th><th>Date</th></tr></thead>
+          <tbody id="all-sales-tbody"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API     = "https://cims-ss3i.onrender.com/api";
+  const token   = localStorage.getItem("cims_token");
+  const user    = JSON.parse(localStorage.getItem("cims_user") || "{}");
+  const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
+
+  let revenueChart = null;
+  let hotelChart   = null;
+  let allSalesData = [];
+  let allDuesData  = [];
+  let toastTimer;
+
+  if (!token || !user || user.role !== "admin") {
+    window.location.href = "login.html";
+  }
+
+  window.addEventListener("load", () => {
+    document.getElementById("user-name").textContent   = user.name || "Admin";
+    document.getElementById("user-avatar").textContent = (user.name || "A").charAt(0).toUpperCase();
+    loadHotelFilter();
+    loadAll();
+  });
+
+  async function loadHotelFilter() {
+    try {
+      const res  = await fetch(`${API}/hotels`, { headers });
+      const data = await res.json();
+      if (!data.success) return;
+      const sel = document.getElementById("hotel-filter");
+      data.hotels.forEach(h => {
+        const opt = document.createElement("option");
+        opt.value = h.id; opt.textContent = h.name;
+        sel.appendChild(opt);
+      });
+    } catch {}
+  }
+
+  async function loadAll() {
+    await Promise.all([loadSalesReport(), loadDues()]);
+  }
+
+  async function loadSalesReport() {
+    const days     = document.getElementById("period-filter").value;
+    const hotel_id = document.getElementById("hotel-filter").value;
+
+    try {
+      const params = new URLSearchParams({ days });
+      if (hotel_id) params.append("hotel_id", hotel_id);
+
+      const res  = await fetch(`${API}/reports/sales?${params}`, { headers });
+      const data = await res.json();
+
+      if (!data.success) return;
+
+      allSalesData = data.sales || [];
+
+      const totalRevenue = allSalesData.reduce((s, sale) => s + Number(sale.total_amount), 0);
+      const totalSales   = allSalesData.length;
+      const avgSale      = totalSales ? Math.round(totalRevenue / totalSales) : 0;
+
+      document.getElementById("stat-revenue").textContent = `\u20B9${totalRevenue.toLocaleString()}`;
+      document.getElementById("stat-sales").textContent   = totalSales;
+      document.getElementById("stat-avg").textContent     = `\u20B9${avgSale.toLocaleString()}`;
+
+      renderRevenueChart(allSalesData);
+      renderHotelChart(allSalesData);
+      renderTopHotels(allSalesData);
+      renderTopProducts(allSalesData);
+      renderAllSales(allSalesData);
+    } catch { showToast("Could not load sales report", "error"); }
+  }
+
+  async function loadDues() {
+    try {
+      const res  = await fetch(`${API}/reports/dues`, { headers });
+      const data = await res.json();
+      if (!data.success) return;
+
+      allDuesData = data.dues || [];
+
+      const totalDues = allDuesData.reduce((s, d) => s + Number(d.total), 0);
+      document.getElementById("stat-dues").textContent = `\u20B9${totalDues.toLocaleString()}`;
+
+      renderDues(allDuesData);
+    } catch {}
+  }
+
+  function renderRevenueChart(sales) {
+    const grouped = {};
+    sales.forEach(s => {
+      const date = s.sold_at?.split("T")[0] || "unknown";
+      grouped[date] = (grouped[date] || 0) + Number(s.total_amount);
+    });
+    const labels = Object.keys(grouped).sort();
+    const values = labels.map(l => grouped[l]);
+
+    if (revenueChart) revenueChart.destroy();
+    const ctx = document.getElementById("revenue-chart").getContext("2d");
+    revenueChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: "Revenue",
+          data: values,
+          borderColor: "#e2b96f",
+          backgroundColor: "rgba(226,185,111,.1)",
+          borderWidth: 2,
+          pointRadius: 3,
+          tension: .4,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: "rgba(232,232,244,.5)", font: { size: 10 } }, grid: { color: "rgba(255,255,255,.04)" } },
+          y: { ticks: { color: "rgba(232,232,244,.5)", font: { size: 10 }, callback: v => `\u20B9${v.toLocaleString()}` }, grid: { color: "rgba(255,255,255,.04)" } },
+        }
+      }
+    });
+  }
+
+  function renderHotelChart(sales) {
+    const grouped = {};
+    sales.forEach(s => {
+      const name = s.hotels?.name || "Unknown";
+      grouped[name] = (grouped[name] || 0) + Number(s.total_amount);
+    });
+    const labels = Object.keys(grouped);
+    const values = labels.map(l => grouped[l]);
+    const colors = ["#e2b96f","#4db89e","#a29bf0","#e07b73","#6c9ef0","#f0a26c","#7edcb4","#c09ef0"];
+
+    if (hotelChart) hotelChart.destroy();
+    const ctx = document.getElementById("hotel-chart").getContext("2d");
+    hotelChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors.slice(0, labels.length),
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: "rgba(232,232,244,.5)", font: { size: 10 } }, grid: { display: false } },
+          y: { ticks: { color: "rgba(232,232,244,.5)", font: { size: 10 }, callback: v => `\u20B9${v.toLocaleString()}` }, grid: { color: "rgba(255,255,255,.04)" } },
+        }
+      }
+    });
+  }
+
+  function renderTopHotels(sales) {
+    const grouped = {};
+    sales.forEach(s => {
+      const name = s.hotels?.name || "Unknown";
+      if (!grouped[name]) grouped[name] = { count: 0, revenue: 0 };
+      grouped[name].count++;
+      grouped[name].revenue += Number(s.total_amount);
+    });
+    const sorted = Object.entries(grouped).sort((a, b) => b[1].revenue - a[1].revenue).slice(0, 5);
+    const tbody  = document.getElementById("top-hotels-tbody");
+
+    if (!sorted.length) { tbody.innerHTML = `<tr><td colspan="4" class="empty">No sales yet</td></tr>`; return; }
+
+    tbody.innerHTML = sorted.map(([name, d], i) => `
+      <tr>
+        <td><span class="rank-num rank-${i+1}">${i + 1}</span></td>
+        <td>${name}</td>
+        <td style="color:var(--muted)">${d.count}</td>
+        <td class="amount-cell">\u20B9${d.revenue.toLocaleString()}</td>
+      </tr>
+    `).join("");
+  }
+
+  function renderTopProducts(sales) {
+    const grouped = {};
+    sales.forEach(s => {
+      const name = s.products?.name || "Unknown";
+      if (!grouped[name]) grouped[name] = { units: 0, revenue: 0 };
+      grouped[name].units   += Number(s.quantity_sold);
+      grouped[name].revenue += Number(s.total_amount);
+    });
+    const sorted = Object.entries(grouped).sort((a, b) => b[1].revenue - a[1].revenue).slice(0, 5);
+    const tbody  = document.getElementById("top-products-tbody");
+
+    if (!sorted.length) { tbody.innerHTML = `<tr><td colspan="4" class="empty">No sales yet</td></tr>`; return; }
+
+    tbody.innerHTML = sorted.map(([name, d], i) => `
+      <tr>
+        <td><span class="rank-num rank-${i+1}">${i + 1}</span></td>
+        <td>${name}</td>
+        <td style="color:var(--muted)">${d.units}</td>
+        <td class="amount-cell">\u20B9${d.revenue.toLocaleString()}</td>
+      </tr>
+    `).join("");
+  }
+
+  function renderDues(dues) {
+    const tbody = document.getElementById("dues-tbody");
+    if (!dues.length) { tbody.innerHTML = `<tr><td colspan="3" class="empty">No outstanding dues</td></tr>`; return; }
+
+    tbody.innerHTML = dues.map(d => `
+      <tr>
+        <td style="font-weight:600">${d.hotel_name}</td>
+        <td class="dues-cell ${!d.total ? 'clear' : ''}">${d.total ? `\u20B9${Number(d.total).toLocaleString()}` : "Clear"}</td>
+        <td><span class="status-pill ${d.total > 0 ? 'pending' : 'paid'}">${d.total > 0 ? "Pending" : "Clear"}</span></td>
+      </tr>
+    `).join("");
+  }
+
+  function renderAllSales(sales) {
+    const tbody = document.getElementById("all-sales-tbody");
+    if (!sales.length) { tbody.innerHTML = `<tr><td colspan="5" class="empty">No sales in this period</td></tr>`; return; }
+
+    tbody.innerHTML = sales.slice(0, 50).map(s => `
+      <tr>
+        <td style="font-weight:500">${s.products?.name || "—"}</td>
+        <td style="color:var(--muted)">${s.hotels?.name || "—"}</td>
+        <td style="color:var(--muted)">${s.quantity_sold}</td>
+        <td class="amount-cell">\u20B9${Number(s.total_amount).toLocaleString()}</td>
+        <td style="color:var(--muted);font-size:12px">${formatDate(s.sold_at)}</td>
+      </tr>
+    `).join("");
+  }
+
+  function formatDate(d) {
+    if (!d) return "—";
+    return new Date(d).toLocaleDateString("en-IN", { day:"numeric", month:"short", year:"numeric" });
+  }
+
+  function exportCSV() {
+    if (!allSalesData.length) return showToast("No data to export", "error");
+    const rows = [["Product","Hotel","Quantity","Amount","Date"]];
+    allSalesData.forEach(s => {
+      rows.push([s.products?.name || "—", s.hotels?.name || "—", s.quantity_sold, s.total_amount, formatDate(s.sold_at)]);
+    });
+    downloadCSV(rows, "cims_sales_report.csv");
+    showToast("Sales report exported", "success");
+  }
+
+  function exportSalesCSV() { exportCSV(); }
+
+  function exportDuesCSV() {
+    if (!allDuesData.length) return showToast("No dues data to export", "error");
+    const rows = [["Hotel","Outstanding Dues","Status"]];
+    allDuesData.forEach(d => {
+      rows.push([d.hotel_name, d.total || 0, d.total > 0 ? "Pending" : "Clear"]);
+    });
+    downloadCSV(rows, "cims_dues_report.csv");
+    showToast("Dues report exported", "success");
+  }
+
+  function downloadCSV(rows, filename) {
+    const csv  = rows.map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function openSidebar()  { document.getElementById("sidebar").classList.add("open"); document.getElementById("sidebar-overlay").classList.add("visible"); }
+  function closeSidebar() { document.getElementById("sidebar").classList.remove("open"); document.getElementById("sidebar-overlay").classList.remove("visible"); }
+
+  function logout() {
+    localStorage.removeItem("cims_token");
+    localStorage.removeItem("cims_user");
+    localStorage.removeItem("cims_role");
+    window.location.href = "login.html";
+  }
+
+  function showToast(msg, type = "") {
+    const el = document.getElementById("toast");
+    el.textContent = msg; el.className = `toast visible ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("visible"), 3000);
+  }
+</script>
+<script src="sanitize.js"></script>
+<script src="timeout.js"></script>
+</body>
+</html>

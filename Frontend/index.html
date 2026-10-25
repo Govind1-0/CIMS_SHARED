@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#1a1a2e"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <title>CIMS — Add Stock</title>
+  <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
+  <style>
+    html, body {
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    html { min-height: 100%; }
+    body { min-height: 100%; }
+
+    button, input, select, textarea { font: inherit; }
+
+    @supports (-webkit-touch-callout: none) {
+      body { min-height: -webkit-fill-available; }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #1a1a2e;
+      --navy-mid:   #16213e;
+      --navy-light: #1e2a45;
+      --gold:       #fffffe;
+      --gold-dk:    #ffffff;
+      --gold-pale:  rgba(226,185,111,.1);
+      --teal:       #2e7d6e;
+      --teal-dk:    #1f5c50;
+      --accent:     #4db89e;
+      --coral:      #e07b73;
+      --white:      #ffffff;
+      --text:       #e8e8f4;
+      --muted:      rgba(232,232,244,.5);
+      --border:     rgba(255,255,255,.08);
+      --card-bg:    rgba(255,255,255,.04);
+      --card-hover: rgba(255,255,255,.07);
+      --radius:     14px;
+      --sidebar-w:  240px;
+    }
+
+    html, body { height: 100%; font-family: system-ui, -apple-system, sans-serif; }
+
+    body {
+      background: var(--navy);
+      color: var(--text);
+      display: flex;
+      min-height: 100dvh;
+    }
+
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--navy-mid);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; bottom: 0;
+      z-index: 50; transition: transform .25s ease;
+    }
+
+    .sidebar-logo {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .mark {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 38px; height: 38px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dk));
+      font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 10px;
+    }
+    .sidebar-logo h1 { font-size: 16px; font-weight: 700; }
+    .sidebar-logo p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+
+    .nav-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--muted); padding: 12px 10px 6px;
+    }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 9px;
+      font-size: 14px; font-weight: 500; color: var(--muted);
+      cursor: pointer; transition: all .15s; border: none;
+      background: none; width: 100%; text-align: left;
+      text-decoration: none; -webkit-tap-highlight-color: transparent;
+    }
+    .nav-item:hover  { background: var(--card-bg); color: var(--text); }
+    .nav-item.active { background: var(--gold-pale); color: var(--gold); font-weight: 600; }
+    .nav-item .icon  { width: 20px; text-align: center; flex-shrink: 0; font-style: normal; }
+
+    .sidebar-footer { padding: 16px 10px; border-top: 1px solid var(--border); }
+    .user-pill {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 9px; background: var(--card-bg);
+    }
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dk));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: var(--navy); flex-shrink: 0;
+    }
+    .user-info .name { font-size: 13px; font-weight: 600; }
+    .user-info .role { font-size: 11px; color: var(--muted); }
+    .logout-btn {
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; font-size: 14px; padding: 4px;
+      transition: color .15s; flex-shrink: 0; margin-left: auto;
+    }
+    .logout-btn:hover { color: var(--coral); }
+
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.6); z-index: 40;
+    }
+    .sidebar-overlay.visible { display: block; }
+
+    .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100dvh; }
+
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 24px; border-bottom: 1px solid var(--border);
+      background: rgba(26,26,46,.8); backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 30;
+    }
+    .topbar-menu {
+      display: none; background: none; border: none;
+      color: var(--text); font-size: 20px; cursor: pointer; padding: 4px;
+    }
+    .topbar-title { font-size: 16px; font-weight: 600; flex: 1; }
+
+    .content {
+      padding: 24px; flex: 1;
+      max-width: 640px; width: 100%; margin: 0 auto;
+    }
+
+    .page-header { margin-bottom: 20px; }
+    .page-header h2 { font-size: 22px; font-weight: 700; }
+    .page-header p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    .mode-tabs {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-bottom: 16px;
+    }
+    .mode-tab {
+      padding: 11px; border: 1.5px solid var(--border);
+      border-radius: 9px; background: transparent;
+      color: var(--muted); font-size: 14px; font-weight: 500;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 8px;
+      transition: all .15s; -webkit-tap-highlight-color: transparent;
+    }
+    .mode-tab.active {
+      border-color: var(--gold); background: var(--gold-pale);
+      color: var(--gold); font-weight: 600;
+    }
+
+    .card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .6px; margin-bottom: 14px;
+    }
+
+    .viewfinder-wrap {
+      position: relative; width: 100%; aspect-ratio: 4/3;
+      border-radius: 10px; overflow: hidden; background: #000; margin-bottom: 10px;
+    }
+    #scanner-target, #scanner-target video, #scanner-target canvas { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+    .scan-frame {
+      width: 65%; aspect-ratio: 3/2; border: 2.5px solid rgba(255,255,255,.8);
+      border-radius: 8px; position: relative; box-shadow: 0 0 0 2000px rgba(0,0,0,.4);
+    }
+    .scan-frame::before, .scan-frame::after {
+      content: ""; position: absolute;
+      width: 18px; height: 18px; border-color: var(--gold); border-style: solid;
+    }
+    .scan-frame::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 5px 0 0 0; }
+    .scan-frame::after  { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 5px 0; }
+    .scan-line {
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      animation: scanline 2s ease-in-out infinite;
+    }
+    @keyframes scanline { 0% { top: 0; opacity: 1; } 90% { top: 95%; opacity: 1; } 100% { top: 100%; opacity: 0; } }
+
+    .scan-hint { font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 12px; }
+
+    .cam-status {
+      text-align: center; font-size: 12px; color: var(--muted);
+      padding: 8px; margin-bottom: 8px;
+    }
+    .cam-status.found { color: var(--accent); font-weight: 600; }
+
+    .stop-btn {
+      width: 100%; padding: 9px; border-radius: 8px;
+      border: 1.5px solid var(--border); background: transparent;
+      color: var(--coral); font-size: 13px; font-weight: 600;
+      cursor: pointer; margin-top: 8px; transition: background .15s;
+    }
+    .stop-btn:hover { background: rgba(224,123,115,.1); }
+
+    label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: .5px; margin-bottom: 6px;
+    }
+
+    input, select {
+      width: 100%; padding: 11px 14px;
+      background: rgba(255,255,255,.06); border: 1.5px solid var(--border);
+      border-radius: 9px; color: var(--text); font-size: 14px; outline: none;
+      transition: border-color .15s; 
+      margin-bottom: 12px;
+    }
+    input:focus, select:focus { border-color: var(--gold); }
+    input::placeholder { color: var(--muted); }
+    select option { background: var(--navy-mid); }
+
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .product-preview {
+      background: rgba(77,184,158,.06); border: 1px solid rgba(77,184,158,.2);
+      border-radius: 10px; padding: 16px; margin-bottom: 14px; display: none;
+    }
+    .product-preview.visible { display: block; }
+    .preview-top { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 12px; }
+    .preview-img {
+      width: 68px; height: 68px; border-radius: 8px; object-fit: cover;
+      border: 1px solid var(--border); flex-shrink: 0; background: var(--card-bg);
+    }
+    .preview-name   { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .preview-origin { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+    .preview-sku    { font-size: 12px; color: var(--muted); }
+    .preview-price  { font-size: 13px; color: var(--accent); font-weight: 600; margin-top: 4px; }
+    .preview-badge  {
+      display: inline-block; padding: 2px 8px; border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+      background: var(--gold-pale); color: var(--gold); margin-top: 4px;
+    }
+
+    .source-tag {
+      font-size: 11px; font-weight: 600; padding: 3px 8px;
+      border-radius: 20px; display: inline-block; margin-bottom: 10px;
+    }
+    .source-tag.cims     { background: rgba(77,184,158,.15); color: var(--accent); }
+    .source-tag.external { background: var(--gold-pale); color: var(--gold); }
+
+    .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+    .btn {
+      width: 100%; padding: 13px; border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      transition: opacity .15s, transform .1s; -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active   { transform: scale(.97); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-gold     { background: linear-gradient(135deg, var(--gold), var(--gold-dk)); color: var(--navy); }
+    .btn-teal     { background: linear-gradient(135deg, var(--accent), var(--teal)); color: #fff; }
+    .btn-ghost    { background: var(--card-bg); color: var(--muted); border: 1.5px solid var(--border); margin-top: 8px; }
+
+    .status-msg {
+      padding: 11px 14px; border-radius: 9px; font-size: 13px;
+      font-weight: 500; margin-bottom: 12px; display: none;
+    }
+    .status-msg.visible { display: block; }
+    .status-msg.success { background: rgba(77,184,158,.15); color: var(--accent); border: 1px solid rgba(77,184,158,.3); }
+    .status-msg.error   { background: rgba(224,123,115,.15); color: var(--coral); border: 1px solid rgba(224,123,115,.3); }
+    .status-msg.info    { background: var(--gold-pale); color: var(--gold); border: 1px solid rgba(226,185,111,.3); }
+
+    .loader {
+      text-align: center; padding: 12px; color: var(--muted);
+      font-size: 13px; display: none;
+    }
+    .loader.visible { display: block; }
+
+    .register-card { display: none; }
+    .register-card.visible { display: block; }
+
+    .barcode-preview {
+      width: 100%; height: 70px; object-fit: contain;
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px; margin-bottom: 12px; background: #fff;
+    }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--navy-light); border: 1px solid var(--border);
+      border-left: 3px solid var(--gold); border-radius: 10px;
+      padding: 12px 16px; font-size: 13px; font-weight: 500;
+      z-index: 200; transform: translateY(80px); opacity: 0;
+      transition: all .3s cubic-bezier(.4,0,.2,1); max-width: 300px;
+    }
+    .toast.visible  { transform: translateY(0); opacity: 1; }
+    .toast.success  { border-left-color: var(--accent); }
+    .toast.error    { border-left-color: var(--coral); }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .topbar-menu { display: block; }
+      .content { padding: 16px; }
+      .row-2 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .content { padding: 12px; }
+
+      .topbar  { padding: 12px 14px; }
+
+      .modal   { padding: 20px 16px; margin: 0 8px; }
+
+      table    { font-size: 12px; }
+      table th,
+      table td { padding: 10px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="mark">C</div>
+    <h1>CIMS</h1>
+    <p>Admin Dashboard</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">Overview</div>
+    <a class="nav-item" href="admin.html"><i class="icon">&#9679;</i> Dashboard</a>
+    <div class="nav-label">Inventory</div>
+    <a class="nav-item active" href="index.html"><i class="icon">&#9679;</i> Add Stock</a>
+    <div class="nav-label">Business</div>
+    <a class="nav-item" href="hotels.html"><i class="icon">&#9679;</i> Hotels</a>
+    <a class="nav-item" href="payment.html"><i class="icon">&#9679;</i> Payments</a>
+    <a class="nav-item" href="sales.html"><i class="icon">&#9679;</i> Sales</a>
+    <a class="nav-item" href="staff.html"><i class="icon">&#9679;</i> Staff</a>
+    <a class="nav-item" href="products.html"><i class="icon">&#9679;</i> Products</a>
+    <a class="nav-item" href="reports.html"><i class="icon">&#9679;</i> Reports</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="user-avatar" id="user-avatar">A</div>
+      <div class="user-info">
+        <div class="name" id="user-name">Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+      <button class="logout-btn" onclick="logout()">&#8618;</button>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <button class="topbar-menu" onclick="openSidebar()">&#9776;</button>
+    <div class="topbar-title">Add Stock</div>
+  </div>
+
+  <div class="content">
+
+    <div class="page-header">
+      <h2>Add stock to inventory</h2>
+      <p>Scan a product barcode to look it up, then assign it to a hotel.</p>
+    </div>
+
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tab-camera" onclick="switchMode('camera')">
+        Camera scan
+      </button>
+      <button class="mode-tab" id="tab-manual" onclick="switchMode('manual')">
+        Manual entry
+      </button>
+    </div>
+
+    <div class="card" id="scan-card">
+      <div class="card-title">Scan barcode</div>
+
+      <div id="camera-section">
+        <div class="viewfinder-wrap">
+          <div id="scanner-target"></div>
+          <div class="scan-overlay">
+            <div class="scan-frame"><div class="scan-line"></div></div>
+          </div>
+        </div>
+        <div class="cam-status" id="cam-status">Initialising camera...</div>
+        <button class="stop-btn" onclick="stopCamera()">Stop camera</button>
+      </div>
+
+      <div id="manual-section" style="display:none">
+        <label>Barcode or SKU</label>
+        <input
+          type="text"
+          id="barcode-input"
+          placeholder="Scan with hardware scanner or type barcode..."
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+        />
+        <button class="btn btn-gold" onclick="lookupBarcode()">Look up product</button>
+      </div>
+
+    </div>
+
+    <div class="loader" id="loader">Looking up product...</div>
+
+    <div class="status-msg" id="status-msg"></div>
+
+    <div class="product-preview" id="product-preview">
+      <div class="source-tag" id="source-tag"></div>
+      <div class="preview-top">
+        <img class="preview-img" id="preview-img" src="" alt="Product"/>
+        <div>
+          <div class="preview-name"   id="preview-name"></div>
+          <div class="preview-origin" id="preview-origin"></div>
+          <div class="preview-sku"    id="preview-sku"></div>
+          <div class="preview-price"  id="preview-price"></div>
+          <span class="preview-badge" id="preview-category"></span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <label>Assign to hotel</label>
+      <select id="hotel-select">
+        <option value="">Select hotel</option>
+      </select>
+
+      <div class="row-2">
+        <div>
+          <label>Quantity</label>
+          <input type="number" id="qty" value="1" min="1" inputmode="numeric"/>
+        </div>
+        <div>
+          <label>Unit cost (&#8377;)</label>
+          <input type="number" id="unit-cost" placeholder="Optional" inputmode="decimal"/>
+        </div>
+      </div>
+
+      <label>Supplier</label>
+      <input type="text" id="supplier" placeholder="Optional"/>
+
+      <button class="btn btn-teal" id="btn-add" onclick="addToInventory()">
+        Confirm — add to inventory
+      </button>
+      <button class="btn btn-ghost" onclick="resetAll()">Cancel</button>
+    </div>
+
+    <div class="card register-card" id="register-card">
+      <div class="card-title">Register new product</div>
+
+      <label>Barcode</label>
+      <input type="text" id="reg-barcode" readonly/>
+
+      <img class="barcode-preview" id="reg-barcode-img" src="" alt="Barcode"/>
+
+      <label>Product name</label>
+      <input type="text" id="reg-name" placeholder="e.g. Kashmiri Pashmina Shawl"/>
+
+      <label>Description</label>
+      <input type="text" id="reg-desc" placeholder="Optional"/>
+
+      <div class="row-2">
+        <div>
+          <label>Origin country</label>
+          <input type="text" id="reg-origin" placeholder="e.g. India"/>
+        </div>
+        <div>
+          <label>Category</label>
+          <input type="text" id="reg-category" placeholder="e.g. Textiles"/>
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div>
+          <label>SKU</label>
+          <input type="text" id="reg-sku" placeholder="e.g. KSH-001"/>
+        </div>
+        <div>
+          <label>Unit price (&#8377;)</label>
+          <input type="number" id="reg-price" placeholder="0" inputmode="decimal"/>
+        </div>
+      </div>
+
+      <button class="btn btn-gold" onclick="registerProduct()">Save new product</button>
+      <button class="btn btn-ghost" onclick="cancelRegister()">Cancel</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API     = "https://cims-ss3i.onrender.com/api";
+  const token   = localStorage.getItem("cims_token");
+  const user    = JSON.parse(localStorage.getItem("cims_user") || "{}");
+  const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
+
+  let scannedProduct = null;
+  let currentMode    = "camera";
+  let scanDebounce   = null;
+  let detectedHandler = null;
+  let toastTimer;
+
+  if (!token || !user || user.role !== "admin") {
+    window.location.href = "login.html";
+  }
+
+  window.addEventListener("load", () => {
+    document.getElementById("user-name").textContent   = user.name || "Admin";
+    document.getElementById("user-avatar").textContent = (user.name || "A").charAt(0).toUpperCase();
+    loadHotels();
+    startCamera();
+  });
+
+  async function loadHotels() {
+    try {
+      const res  = await fetch(`${API}/hotels`, { headers });
+      const data = await res.json();
+      if (!data.success) return;
+
+      const sel = document.getElementById("hotel-select");
+      sel.innerHTML = `<option value="">Select hotel</option>`;
+      data.hotels
+        .filter(h => h.status === "active")
+        .forEach(h => {
+          const opt = document.createElement("option");
+          opt.value       = h.id;
+          opt.textContent = h.name;
+          sel.appendChild(opt);
+        });
+    } catch {}
+  }
+
+  function switchMode(mode) {
+    currentMode = mode;
+    document.getElementById("tab-camera").classList.toggle("active", mode === "camera");
+    document.getElementById("tab-manual").classList.toggle("active", mode === "manual");
+    document.getElementById("camera-section").style.display = mode === "camera" ? "block" : "none";
+    document.getElementById("manual-section").style.display = mode === "manual" ? "block" : "none";
+
+    if (mode === "camera") {
+      startCamera();
+    } else {
+      stopCamera();
+      setTimeout(() => document.getElementById("barcode-input").focus(), 100);
+    }
+  }
+
+  let lastScan = ""; let lastTime = 0;
+
+  function startCamera() {
+    const status = document.getElementById("cam-status");
+    status.textContent = "Initialising camera...";
+    status.className   = "cam-status";
+
+    stopCamera();
+
+    Quagga.init({
+      inputStream: {
+        type: "LiveStream",
+        target: document.getElementById("scanner-target"),
+        constraints: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+      },
+      decoder: {
+        readers: ["code_128_reader","ean_reader","ean_8_reader","upc_reader","upc_e_reader","code_39_reader"],
+      },
+      locate: true,
+    }, err => {
+      if (err) {
+        status.textContent = "Camera access denied — switch to manual entry";
+        switchMode("manual");
+        return;
+      }
+      Quagga.start();
+      status.textContent = "Camera ready — point at barcode";
+    });
+
+    detectedHandler = result => {
+      const code = result.codeResult.code;
+      const now  = Date.now();
+      if (code === lastScan && now - lastTime < 2000) return;
+      lastScan = code; lastTime = now;
+      if (navigator.vibrate) navigator.vibrate(60);
+
+      const status = document.getElementById("cam-status");
+      status.textContent = `Detected: ${code}`;
+      status.className   = "cam-status found";
+
+      lookupBarcode(code);
+    };
+    Quagga.onDetected(detectedHandler);
+  }
+
+  function stopCamera() {
+    if (detectedHandler) {
+      Quagga.offDetected(detectedHandler);
+      detectedHandler = null;
+    }
+    try { Quagga.stop(); } catch {}
+    const video = document.querySelector("#scanner-target video");
+    if (video?.srcObject) { video.srcObject.getTracks().forEach(t => t.stop()); video.srcObject = null; }
+    document.getElementById("cam-status").textContent = "Camera stopped";
+    document.getElementById("cam-status").className   = "cam-status";
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const input = document.getElementById("barcode-input");
+    if (input) {
+      input.addEventListener("keydown", e => { if (e.key === "Enter") lookupBarcode(); });
+    }
+  });
+
+  async function lookupBarcode(barcode) {
+    const value = barcode || document.getElementById("barcode-input")?.value.trim();
+    if (!value) return showStatus("Please enter or scan a barcode.", "error");
+
+    showLoader(true);
+    hideProduct();
+    hideStatus();
+    hideRegister();
+
+    try {
+      const res  = await fetch(`${API}/barcode/lookup/${encodeURIComponent(value)}`, { headers });
+      const data = await res.json();
+      showLoader(false);
+
+      if (!data.success) {
+        showStatus(`Barcode not found. Register it as a new product below.`, "info");
+        showRegisterForm(value);
+        if (currentMode === "camera") stopCamera();
+        return;
+      }
+
+      scannedProduct = data.product;
+      showProduct(data.product, data.source);
+      if (currentMode === "camera") stopCamera();
+
+    } catch {
+      showLoader(false);
+      showStatus("Cannot connect to server. Is the backend running?", "error");
+    }
+  }
+
+  async function addToInventory() {
+    const hotel_id  = document.getElementById("hotel-select").value;
+    const quantity  = parseInt(document.getElementById("qty").value);
+    const unit_cost = parseFloat(document.getElementById("unit-cost").value) || 0;
+    const supplier  = document.getElementById("supplier").value.trim();
+
+    if (!hotel_id)              return showStatus("Please select a hotel.", "error");
+    if (!quantity || quantity < 1) return showStatus("Quantity must be at least 1.", "error");
+
+    const btn = document.getElementById("btn-add");
+    btn.disabled = true; btn.textContent = "Saving...";
+
+    try {
+      const res  = await fetch(`${API}/inventory/add`, {
+        method: "POST", headers,
+        body: JSON.stringify({
+          product_id: scannedProduct.id,
+          hotel_id, quantity, unit_cost, supplier,
+        }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        showToast(data.message, "success");
+        if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
+        resetAll();
+        if (currentMode === "camera") startCamera();
+      } else {
+        showStatus(data.message, "error");
+      }
+    } catch {
+      showStatus("Cannot connect to server.", "error");
+    } finally {
+      btn.disabled = false; btn.textContent = "Confirm — add to inventory";
+    }
+  }
+
+  async function registerProduct() {
+    const product = {
+      name:           document.getElementById("reg-name").value.trim(),
+      description:    document.getElementById("reg-desc").value.trim(),
+      origin_country: document.getElementById("reg-origin").value.trim(),
+      category:       document.getElementById("reg-category").value.trim(),
+      barcode:        document.getElementById("reg-barcode").value.trim(),
+      sku:            document.getElementById("reg-sku").value.trim(),
+      unit_price:     parseFloat(document.getElementById("reg-price").value) || 0,
+    };
+
+    if (!product.name) return showToast("Product name is required.", "error");
+
+    try {
+      const res  = await fetch(`${API}/products/add`, {
+        method: "POST", headers,
+        body: JSON.stringify(product),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        showToast("Product registered. Scan again to add to inventory.");
+        cancelRegister();
+        resetAll();
+        if (currentMode === "camera") startCamera();
+      } else {
+        showToast(data.message || "Failed to register product.", "error");
+      }
+    } catch {
+      showToast("Cannot connect to server.", "error");
+    }
+  }
+
+  function showProduct(p, source) {
+    document.getElementById("preview-name").textContent     = p.name;
+    document.getElementById("preview-origin").textContent   = p.origin_country || "";
+    document.getElementById("preview-sku").textContent      = `SKU: ${p.sku || "—"}`;
+    document.getElementById("preview-price").textContent    = `\u20B9${Number(p.unit_price).toLocaleString()}`;
+    document.getElementById("preview-category").textContent = p.category || "";
+    document.getElementById("preview-img").src = p.image_url || "https://placehold.co/68x68?text=Item";
+
+    const tag = document.getElementById("source-tag");
+    if (source === "cims") {
+      tag.textContent  = "Found in CIMS database";
+      tag.className    = "source-tag cims";
+    } else {
+      tag.textContent  = "Found online — please review details";
+      tag.className    = "source-tag external";
+    }
+
+    document.getElementById("product-preview").classList.add("visible");
+    document.getElementById("product-preview").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function showRegisterForm(barcode) {
+    document.getElementById("reg-barcode").value = barcode;
+    document.getElementById("reg-barcode-img").src =
+      `${API.replace("/api", "")}/api/barcode/generate/${barcode}`;
+    document.getElementById("register-card").classList.add("visible");
+    document.getElementById("register-card").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function cancelRegister() {
+    document.getElementById("register-card").classList.remove("visible");
+    ["reg-name","reg-desc","reg-origin","reg-category","reg-sku","reg-price"].forEach(id => {
+      document.getElementById(id).value = "";
+    });
+  }
+
+  function hideProduct()   { document.getElementById("product-preview").classList.remove("visible"); scannedProduct = null; }
+  function hideRegister()  { document.getElementById("register-card").classList.remove("visible"); }
+  function showLoader(v)   { document.getElementById("loader").classList.toggle("visible", v); }
+
+  function showStatus(msg, type) {
+    const el = document.getElementById("status-msg");
+    el.textContent = msg; el.className = `status-msg visible ${type}`;
+  }
+  function hideStatus() { document.getElementById("status-msg").className = "status-msg"; }
+
+  function resetAll() {
+    scannedProduct = null;
+    hideProduct(); hideRegister(); hideStatus();
+    if (document.getElementById("barcode-input")) document.getElementById("barcode-input").value = "";
+    document.getElementById("qty").value          = "1";
+    document.getElementById("unit-cost").value    = "";
+    document.getElementById("supplier").value     = "";
+    document.getElementById("hotel-select").value = "";
+    document.getElementById("cam-status").textContent = "Camera ready — point at barcode";
+    document.getElementById("cam-status").className   = "cam-status";
+  }
+
+  function openSidebar()  { document.getElementById("sidebar").classList.add("open"); document.getElementById("sidebar-overlay").classList.add("visible"); }
+  function closeSidebar() { document.getElementById("sidebar").classList.remove("open"); document.getElementById("sidebar-overlay").classList.remove("visible"); }
+
+  function logout() {
+    localStorage.removeItem("cims_token");
+    localStorage.removeItem("cims_user");
+    localStorage.removeItem("cims_role");
+    window.location.href = "login.html";
+  }
+
+  function showToast(msg, type = "") {
+    const el = document.getElementById("toast");
+    el.textContent = msg; el.className = `toast visible ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("visible"), 3000);
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stopCamera();
+    else if (currentMode === "camera") startCamera();
+  });
+</script>
+<script src="sanitize.js"></script>
+<script src="timeout.js"></script>
+</body>
+</html>
