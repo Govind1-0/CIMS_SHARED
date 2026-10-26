@@ -10,6 +10,41 @@ const supabase = createClient(
 const { requireAuth } = require("../middleware/auth");
 router.use(requireAuth);
 
+const crypto = require("crypto");
+
+// ---- product images (Supabase Storage) ----
+const IMAGE_BUCKET    = "product-images";
+const IMAGE_MAX_BYTES = 2 * 1024 * 1024;           // 2 MB after decoding
+const IMAGE_TYPES     = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+
+// Only treat a URL as ours if it points into our public bucket
+function storedImagePath(url) {
+  if (!url || !process.env.SUPABASE_URL) return null;
+  const prefix = `${process.env.SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/${IMAGE_BUCKET}/`;
+  const u = String(url);
+  if (!u.startsWith(prefix)) return null;
+  try { return decodeURIComponent(u.slice(prefix.length).split("?")[0]); } catch { return null; }
+}
+
+// Best-effort cleanup: never blocks or fails the request
+async function removeStoredImage(url) {
+  const path = storedImagePath(url);
+  if (!path) return;
+  try {
+    await supabase.storage.from(IMAGE_BUCKET).remove([path]);
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Image cleanup failed:`, err.message);
+  }
+}
+
+// Check the real file signature so a fake content-type can't sneak through
+function looksLikeImage(buf, type) {
+  if (type === "image/jpeg") return buf.length > 3 && buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF;
+  if (type === "image/png")  return buf.length > 8 && buf.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]));
+  if (type === "image/webp") return buf.length > 12 && buf.slice(0, 4).toString() === "RIFF" && buf.slice(8, 12).toString() === "WEBP";
+  return false;
+}
+
 
 router.use((req, res, next) => {
   const hotel_id = req.params.hotel_id || req.query.hotel_id || req.body?.hotel_id;
@@ -567,7 +602,55 @@ router.get("/products", async (req, res) => {
   } catch { return res.status(500).json({ success: false, message: "Server error" }); }
 });
 
+router.post("/products/upload", async (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ success: false, message: "Admin access required." });
+  }
+
+  const dataUrl = String(req.body?.image || "");
+  const marker  = ";base64,";
+  const cut     = dataUrl.indexOf(marker);
+  const type    = dataUrl.startsWith("data:") && cut > 5 ? dataUrl.slice(5, cut) : "";
+
+  if (!IMAGE_TYPES[type]) {
+    return res.status(400).json({ success: false, message: "Only JPEG, PNG or WebP images are allowed." });
+  }
+
+  const buffer = Buffer.from(dataUrl.slice(cut + marker.length), "base64");
+  if (!buffer.length)                  return res.status(400).json({ success: false, message: "Empty image." });
+  if (buffer.length > IMAGE_MAX_BYTES) return res.status(413).json({ success: false, message: "Image is too large (max 2 MB)." });
+  if (!looksLikeImage(buffer, type))   return res.status(400).json({ success: false, message: "That file is not a valid image." });
+
+  const path = `products/${crypto.randomUUID()}.${IMAGE_TYPES[type]}`;
+
+  try {
+    const { error } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .upload(path, buffer, { contentType: type, cacheControl: "31536000", upsert: false });
+
+    if (error) {
+      console.error(`[${new Date().toISOString()}] Image upload error:`, error.message);
+      const missing = /bucket/i.test(error.message || "") && /not found/i.test(error.message || "");
+      return res.status(500).json({
+        success: false,
+        message: missing
+          ? "Image storage is not set up yet (create the 'product-images' bucket in Supabase)."
+          : "Could not store the image.",
+      });
+    }
+
+    const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+    return res.status(201).json({ success: true, url: data.publicUrl });
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Image upload error:`, err.message);
+    return res.status(500).json({ success: false, message: "Server error." });
+  }
+});
+
 router.post("/products/add", async (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ success: false, message: "Admin access required." });
+  }
   const { name, description, origin_country, category, barcode, sku, unit_price, image_url } = req.body;
   if (!name)    return res.status(400).json({ success: false, message: "Product name is required." });
   if (!barcode) return res.status(400).json({ success: false, message: "Barcode is required." });
@@ -586,6 +669,9 @@ router.post("/products/add", async (req, res) => {
 });
 
 router.put("/products/:id", async (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ success: false, message: "Admin access required." });
+  }
   const { name, description, origin_country, category, barcode, sku, unit_price, image_url } = req.body;
 
   if (!name)    return res.status(400).json({ success: false, message: "Product name is required." });
@@ -594,12 +680,19 @@ router.put("/products/:id", async (req, res) => {
   if (unit_price < 0) return res.status(400).json({ success: false, message: "Price cannot be negative." });
 
   try {
+    const { data: before } = await supabase
+      .from("products").select("image_url").eq("id", req.params.id).single();
+
     const { data, error } = await supabase
       .from("products")
       .update({ name, description, origin_country, category, barcode, sku, unit_price, image_url })
       .eq("id", req.params.id)
       .select().single();
     if (error) throw error;
+
+    // photo was replaced or removed -> delete the old file from our bucket
+    if (before?.image_url && before.image_url !== image_url) await removeStoredImage(before.image_url);
+
     return res.json({ success: true, product: data });
   } catch (err) {
     console.error(`[${new Date().toISOString()}] Product update error:`, err.message);
@@ -608,9 +701,18 @@ router.put("/products/:id", async (req, res) => {
 });
 
 router.delete("/products/:id", async (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ success: false, message: "Admin access required." });
+  }
   try {
+    const { data: before } = await supabase
+      .from("products").select("image_url").eq("id", req.params.id).single();
+
     const { error } = await supabase.from("products").delete().eq("id", req.params.id);
     if (error) throw error;
+
+    if (before?.image_url) await removeStoredImage(before.image_url);
+
     return res.json({ success: true, message: "Product deleted." });
   } catch { return res.status(500).json({ success: false, message: "Server error" }); }
 });

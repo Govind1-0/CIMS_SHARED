@@ -179,6 +179,20 @@
       table th,
       table td { padding: 10px 12px; }
     }
+
+    /* ---- product photo picker ---- */
+    .photo-box { display: flex; gap: 14px; align-items: center; }
+    .photo-preview { width: 96px; height: 96px; flex: 0 0 96px; border-radius: 10px; background: var(--navy-light); border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--muted); text-align: center; overflow: hidden; padding: 4px; }
+    .photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 6px; }
+    .photo-preview.bad { border-color: var(--coral); color: var(--coral); }
+    .photo-actions { display: flex; flex-direction: column; gap: 8px; }
+    .photo-btn { padding: 9px 14px; border-radius: 9px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+    .photo-btn.danger { color: var(--coral); }
+    .photo-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .photo-status { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .photo-status.err { color: var(--coral); }
+    details.photo-url { margin-top: 10px; }
+    details.photo-url summary { font-size: 12px; color: var(--muted); cursor: pointer; margin-bottom: 8px; }
   </style>
 </head>
 <body>
@@ -220,7 +234,7 @@
   <div class="topbar">
     <button class="topbar-menu" onclick="openSidebar()">&#9776;</button>
     <div class="topbar-title">Products</div>
-    <button class="btn-primary" onclick="openAddModal()">+ Add product</button>
+    <button class="btn-primary" onclick="openAddModal()"> Add product</button>
   </div>
 
   <div class="content">
@@ -294,15 +308,26 @@
         <input type="text" id="f-sku" placeholder="e.g. KSH-001"/>
       </div>
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Unit price (&#8377;)</label>
-        <input type="number" id="f-price" placeholder="0" inputmode="decimal"/>
+    <div class="field">
+      <label>Unit price (&#8377;)</label>
+      <input type="number" id="f-price" placeholder="0" inputmode="decimal"/>
+    </div>
+
+    <div class="field">
+      <label>Product photo</label>
+      <div class="photo-box">
+        <div class="photo-preview" id="photo-preview">No photo</div>
+        <div class="photo-actions">
+          <button type="button" class="photo-btn" id="photo-pick-btn" onclick="document.getElementById('f-file').click()">Choose photo</button>
+          <button type="button" class="photo-btn danger" id="photo-remove-btn" onclick="removePhoto()" style="display:none">Remove</button>
+        </div>
+        <input type="file" id="f-file" accept="image/*" style="display:none" onchange="onPhotoChosen(this)"/>
       </div>
-      <div class="field">
-        <label>Image URL</label>
-        <input type="text" id="f-image" placeholder="https://..."/>
-      </div>
+      <div class="photo-status" id="photo-status"></div>
+      <details class="photo-url" id="photo-url-box">
+        <summary>Or paste an image link</summary>
+        <input type="text" id="f-image" placeholder="https://..." oninput="updatePreview()"/>
+      </details>
     </div>
 
     <div class="modal-actions">
@@ -330,7 +355,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const API     = "https://cims-backends.onrender.com/api";
+  const API     = "https://cims-ss3i.onrender.com/api";
   const token   = localStorage.getItem("cims_token");
   const user    = JSON.parse(localStorage.getItem("cims_user") || "{}");
   const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
@@ -392,12 +417,12 @@
     grid.innerHTML = products.map(p => `
       <div class="product-card">
         ${p.image_url
-          ? `<img class="product-img" src="${p.image_url}" alt="${p.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+          ? `<img class="product-img" loading="lazy" src="${esc(p.image_url)}" alt="${esc(p.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
              <div class="product-img-placeholder" style="display:none">No image</div>`
           : `<div class="product-img-placeholder">No image</div>`
         }
         <div class="product-body">
-          <div class="product-name">${p.name}</div>
+          <div class="product-name">${esc(p.name)}</div>
           <div class="product-meta">${[p.origin_country, p.category].filter(Boolean).join(" &middot; ")}</div>
           <div class="product-row">
             <span class="product-price">\u20B9${Number(p.unit_price).toLocaleString()}</span>
@@ -438,6 +463,7 @@
     ["f-name","f-desc","f-origin","f-category","f-barcode","f-sku","f-price","f-image"].forEach(id => {
       document.getElementById(id).value = "";
     });
+    resetPhotoUi();
     document.getElementById("product-modal").classList.add("visible");
   }
 
@@ -456,6 +482,7 @@
     document.getElementById("f-sku").value      = p.sku             || "";
     document.getElementById("f-price").value    = p.unit_price      || "";
     document.getElementById("f-image").value    = p.image_url       || "";
+    resetPhotoUi();
     document.getElementById("product-modal").classList.add("visible");
   }
 
@@ -541,6 +568,116 @@
     localStorage.removeItem("cims_user");
     localStorage.removeItem("cims_role");
     window.location.href = "login.html";
+  }
+
+  // ---------- product photo ----------
+  function esc(v) {
+    return String(v ?? "").replace(/[&<>"']/g, c => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function setPhotoStatus(msg, isErr) {
+    const el = document.getElementById("photo-status");
+    el.textContent = msg || "";
+    el.className = "photo-status" + (isErr ? " err" : "");
+  }
+
+  function setUploading(on) {
+    document.getElementById("photo-pick-btn").disabled   = on;
+    document.getElementById("photo-remove-btn").disabled = on;
+    document.getElementById("modal-save-btn").disabled   = on;
+  }
+
+  // shows the current image (uploaded or pasted link) so a broken link is obvious right away
+  function updatePreview() {
+    const url  = document.getElementById("f-image").value.trim();
+    const box  = document.getElementById("photo-preview");
+    const rm   = document.getElementById("photo-remove-btn");
+    box.classList.remove("bad");
+    if (!url) {
+      box.textContent = "No photo";
+      rm.style.display = "none";
+      return;
+    }
+    rm.style.display = "block";
+    box.innerHTML = `<img alt="Preview" src="${esc(url)}"/>`;
+    box.firstChild.onerror = () => {
+      box.classList.add("bad");
+      box.textContent = "Link does not load as an image";
+    };
+  }
+
+  function resetPhotoUi() {
+    setPhotoStatus("");
+    setUploading(false);
+    document.getElementById("f-file").value = "";
+    const hasUrl = !!document.getElementById("f-image").value.trim();
+    // keep the paste-a-link box closed unless the product already uses an external link
+    document.getElementById("photo-url-box").open = hasUrl && !/\/storage\/v1\/object\/public\/product-images\//.test(document.getElementById("f-image").value);
+    updatePreview();
+  }
+
+  function removePhoto() {
+    document.getElementById("f-image").value = "";
+    updatePreview();
+    setPhotoStatus("Photo removed. Press Save to apply.");
+  }
+
+  // resize to max 1000px and re-encode as JPEG so phone photos upload fast
+  function shrinkImage(file) {
+    return new Promise((resolve, reject) => {
+      const objUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(objUrl);
+        const MAX   = 1000;
+        const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+        const w = Math.max(1, Math.round(img.naturalWidth  * scale));
+        const h = Math.max(1, Math.round(img.naturalHeight * scale));
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = "#fff";            // PNG transparency -> white
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        let q = 0.85, out = c.toDataURL("image/jpeg", q);
+        while (out.length > 800000 && q > 0.4) { q -= 0.1; out = c.toDataURL("image/jpeg", q); }
+        if (out.length > 900000) reject(new Error("Photo is too large even after shrinking."));
+        else resolve(out);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objUrl);
+        reject(new Error("Could not read that photo. Try a JPEG or PNG."));
+      };
+      img.src = objUrl;
+    });
+  }
+
+  async function onPhotoChosen(input) {
+    const file = input.files && input.files[0];
+    input.value = "";
+    if (!file) return;
+    if (!/^image\//.test(file.type)) return setPhotoStatus("Please choose an image file.", true);
+
+    setUploading(true);
+    setPhotoStatus("Preparing photo...");
+    try {
+      const image = await shrinkImage(file);
+      setPhotoStatus("Uploading...");
+      const res  = await fetch(`${API}/products/upload`, {
+        method: "POST", headers, body: JSON.stringify({ image }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.message || "Upload failed. Please try again.");
+
+      document.getElementById("f-image").value = data.url;
+      updatePreview();
+      setPhotoStatus("Photo uploaded. Press Save to keep it.");
+    } catch (err) {
+      setPhotoStatus(err.message || "Upload failed.", true);
+    } finally {
+      setUploading(false);
+    }
   }
 
   function showToast(msg, type = "") {

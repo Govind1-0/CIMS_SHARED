@@ -2,13 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <meta name="theme-color" content="#0f3d30"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <title>CIMS — Hotel Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
   <style>
+    html, body {
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    html { min-height: 100%; }
+    body { min-height: 100%; }
+
+    button, input, select, textarea { font: inherit; }
+
+    @supports (-webkit-touch-callout: none) {
+      body { min-height: -webkit-fill-available; }
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
@@ -189,7 +211,7 @@
       -webkit-tap-highlight-color: transparent;
       letter-spacing: .2px;
     }
-    
+
     .scan-cta:active { transform: scale(.98); opacity: .9; }
     .scan-cta-icon {
       width: 28px; height: 28px;
@@ -480,6 +502,44 @@
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .stat-value { font-size: 20px; }
     }
+    @media (max-width: 480px) {
+      .content { padding: 12px; }
+
+      .topbar  { padding: 12px 14px; }
+
+      .modal   { padding: 20px 16px; margin: 0 8px; }
+
+      table    { font-size: 12px; }
+      table th,
+      table td { padding: 10px 12px; }
+    }
+
+    /* ---- product photos + details (hotel side) ---- */
+    .cat-inline { display: none; }
+    .inv-prod { display: flex; align-items: center; gap: 10px; }
+    .inv-thumb-wrap { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 8px; background: rgba(255,255,255,.06); border: 1px solid var(--border); overflow: hidden; }
+    .inv-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .inv-table tr.clickable { cursor: pointer; }
+    .pd-img-wrap { width: 100%; height: 240px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid var(--border); overflow: hidden; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+    .pd-img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .pd-desc { font-size: 13px; line-height: 1.5; color: var(--muted); margin-bottom: 10px; white-space: pre-wrap; }
+    .pd-row { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .pd-row span:first-child { color: var(--muted); }
+    .pd-row span:last-child { font-weight: 600; text-align: right; }
+    .pd-close { width: 100%; margin-top: 16px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); font-size: 14px; font-weight: 700; cursor: pointer; }
+
+    /* mobile width fix: keep wide tables inside the screen */
+    .main { min-width: 0; }
+    @media (max-width: 480px) {
+      .inv-table th, .inv-table td { padding: 10px 8px; }
+      .inv-table th:first-child, .inv-table td:first-child { padding-left: 12px; }
+      .stock-bar-wrap { width: 56px; }
+      .inv-thumb-wrap { width: 38px; height: 38px; flex-basis: 38px; }
+      .inv-prod { gap: 8px; }
+      .inv-table th:nth-child(2), .inv-table td:nth-child(2) { display: none; }  /* category moves under the name */
+      .cat-inline { display: inline; }
+    }
+      .pd-sheet { background: #110d41; }
   </style>
 </head>
 <body>
@@ -643,6 +703,7 @@
 
 </div>
 
+
 <div class="modal-overlay" id="report-modal">
   <div class="scan-modal">
     <div class="modal-handle"></div>
@@ -740,14 +801,26 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="product-modal" onclick="if(event.target===this)closeProduct()">
+  <div class="scan-modal pd-sheet" style="max-height:90dvh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="pd-name">Product</div>
+    <div class="pd-img-wrap" id="pd-img-wrap">No photo</div>
+    <div class="pd-desc" id="pd-desc"></div>
+    <div id="pd-rows"></div>
+    <button class="pd-close" onclick="closeProduct()">Close</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-  const API     = "https://cims-backends.onrender.com/api";
+  const API     = "https://cims-ss3i.onrender.com/api";
   const token   = localStorage.getItem("cims_token");
   const user    = JSON.parse(localStorage.getItem("cims_user") || "{}");
   const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
 
+  let invItems       = [];
   let scannedProduct = null;
   let saleQty        = 1;
   let toastTimer;
@@ -813,19 +886,27 @@
         document.getElementById("low-stock-badge").style.display = "inline";
       }
 
-      tbody.innerHTML = data.inventory.map(i => {
+      invItems = data.inventory;
+      tbody.innerHTML = data.inventory.map((i, idx) => {
         const remaining = i.quantity_remaining;
         const assigned  = i.quantity_assigned;
         const pct       = assigned > 0 ? Math.round((remaining / assigned) * 100) : 0;
         const level     = pct > 40 ? "high" : pct > 10 ? "low" : "out";
         const isLow     = remaining <= 3;
         return `
-          <tr>
+          <tr class="clickable" onclick="openProduct(${idx})">
             <td>
-              <strong>${i.products?.name ?? "—"}</strong><br/>
-              <span style="font-size:11px;color:var(--muted)">${i.products?.origin_country ?? ""}</span>
+              <div class="inv-prod">
+                <div class="inv-thumb-wrap">${i.products?.image_url
+                  ? `<img class="inv-thumb" loading="lazy" src="${esc(i.products.image_url)}" alt="" onerror="this.style.display='none'"/>`
+                  : ""}</div>
+                <div>
+                  <strong>${esc(i.products?.name ?? "—")}</strong><br/>
+                  <span style="font-size:11px;color:var(--muted)">${esc(i.products?.origin_country ?? "")}<span class="cat-inline"> &middot; ${esc(i.products?.category ?? "")}</span></span>
+                </div>
+              </div>
             </td>
-            <td style="color:var(--muted);font-size:12px">${i.products?.category ?? "—"}</td>
+            <td style="color:var(--muted);font-size:12px">${esc(i.products?.category ?? "—")}</td>
             <td>
               <div class="stock-num ${isLow ? "low-stock" : ""}">
                 ${remaining} units${isLow ? " — Low" : ""}
@@ -1066,6 +1147,48 @@
     window.location.href = "login.html";
   }
 
+  function esc(v) {
+    return String(v ?? "").replace(/[&<>"']/g, c => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function openProduct(idx) {
+    const item = invItems[idx];
+    const p    = item && item.products;
+    if (!p) return;
+
+    document.getElementById("pd-name").textContent = p.name || "Product";
+
+    const wrap = document.getElementById("pd-img-wrap");
+    wrap.textContent = "No photo";
+    if (p.image_url) {
+      const img = document.createElement("img");
+      img.className = "pd-img";
+      img.alt = p.name || "";
+      img.onerror = () => { wrap.textContent = "No photo"; };
+      img.onload  = () => { wrap.textContent = ""; wrap.appendChild(img); };
+      img.src = p.image_url;
+    }
+
+    document.getElementById("pd-desc").textContent = p.description || "";
+
+    const rows = [
+      ["Category", p.category],
+      ["Origin",   p.origin_country],
+      ["SKU",      p.sku],
+      ["Price",    p.unit_price ? "\u20B9" + Number(p.unit_price).toLocaleString("en-IN") : ""],
+      ["In stock", item.quantity_remaining != null ? item.quantity_remaining + " units" : ""],
+    ].filter(r => r[1]);
+    document.getElementById("pd-rows").innerHTML = rows
+      .map(r => `<div class="pd-row"><span>${esc(r[0])}</span><span>${esc(r[1])}</span></div>`).join("");
+
+    document.getElementById("product-modal").classList.add("visible");
+  }
+
+  function closeProduct() {
+    document.getElementById("product-modal").classList.remove("visible");
+  }
+
   function showToast(msg, type = "") {
     const el = document.getElementById("toast");
     el.textContent = msg;
@@ -1086,8 +1209,6 @@
   }
 
   setInterval(loadAll, 60000);
-
-  const ADMIN_WHATSAPP = "917907356098";
 
 async function notifyAdmin() {
   const btn = document.getElementById("btn-notify");
@@ -1122,12 +1243,15 @@ async function notifyAdmin() {
   }
 }
 
+
 function openWhatsApp() {
   const message = encodeURIComponent(
     `Need assistance — ${user.hotel_name} (Hotel ID: ${user.hotel_id})`
   );
-  window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${message}`, "_blank");
+  const backendUrl = API.replace(/\/api\/?$/, "");
+  window.open(`${backendUrl}/contact/whatsapp?text=${message}`, "_blank", "noopener,noreferrer");
 }
+
 
 function openReportModal() {
   document.getElementById("report-modal").classList.add("visible");
@@ -1139,6 +1263,7 @@ function openReportModal() {
 function closeReportModal() {
   document.getElementById("report-modal").classList.remove("visible");
 }
+
 
 async function submitReport() {
   const type        = document.getElementById("issue-type").value.trim();
@@ -1194,5 +1319,6 @@ function showReportStatus(msg, type) {
 
 </script>
 <script src="sanitize.js"></script>
+<script src="timeout.js"></script>
 </body>
 </html>

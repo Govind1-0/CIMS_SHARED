@@ -1,13 +1,4 @@
 require("dotenv").config();
-
-const requiredEnv = ["SUPABASE_URL", "SUPABASE_SERVICE_KEY", "JWT_SECRET"];
-const missingEnv = requiredEnv.filter(name => !process.env[name]?.trim());
-
-if (missingEnv.length > 0) {
-    console.error(`Missing required environment variables: ${missingEnv.join(", ")}`);
-    process.exit(1);
-}
-
 const express   = require("express");
 const cors      = require("cors");
 const helmet    = require("helmet");
@@ -19,31 +10,27 @@ const authRoutes      = require("./routes/auth");
 const inventoryRoutes = require("./routes/inventory");
 const barcodeRoutes   = require("./routes/barcode");
 const dashboardRoutes = require("./routes/dashboard");
+const { requireAdmin }    = require("./middleware/auth");
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(helmet());
 
-const allowedOrigins = [
+app.use(cors({
+  origin: [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
+    "http://localhost",
     "https://localhost",
+    "capacitor://localhost",
     "https://cimsshared.vercel.app"
-];
-
-app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-
-        console.error("CORS blocked origin:", origin);
-        return callback(new Error("Origin not allowed by CORS"));
-    },
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+  ],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
+
+app.use("/api/products/upload", requireAdmin, express.json({ limit: "1mb" }));
 
 app.use(express.json({ limit: "10kb" }));
 app.use(morgan("combined"));
@@ -70,6 +57,20 @@ app.get("/", (req, res) => {
   res.json({ message: "CIMS backend running" });
 });
 
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
+app.get("/contact/whatsapp", (req, res) => {
+  const phone = String(process.env.ADMIN_WHATSAPP || "").replace(/\D/g, "");
+  if (phone.length < 8 || phone.length > 15) {
+    return res.status(503).send("WhatsApp contact is not configured.");
+  }
+
+  const message = String(req.query.text || "").slice(0, 500);
+  return res.redirect(302, `https://wa.me/${phone}?text=${encodeURIComponent(message)}`);
+});
+
 app.use((err, req, res, next) => {
   const isProd = process.env.NODE_ENV === "production";
   console.error(`[${new Date().toISOString()}] Error:`, err.message);
@@ -79,6 +80,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running at http://0.0.0.0:${PORT}`);
 });
