@@ -104,7 +104,7 @@ router.get("/all", async (req, res) => {
 
     const withBarcodes = products.map(p => ({
       ...p,
-      barcode_image_url: `https://cims-ss3i.onrender.com/api/barcode/generate/${encodeURIComponent(p.barcode)}`,
+      barcode_image_url: `https://cims-backends.onrender.com/api/barcode/generate/${encodeURIComponent(p.barcode)}`,
     }));
 
     return res.status(200).json({
