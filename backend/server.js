@@ -1,4 +1,13 @@
 require("dotenv").config();
+
+const requiredEnv = ["SUPABASE_URL", "SUPABASE_SERVICE_KEY", "JWT_SECRET"];
+const missingEnv = requiredEnv.filter(name => !process.env[name]?.trim());
+
+if (missingEnv.length > 0) {
+    console.error(`Missing required environment variables: ${missingEnv.join(", ")}`);
+    process.exit(1);
+}
+
 const express   = require("express");
 const cors      = require("cors");
 const helmet    = require("helmet");
@@ -20,7 +29,7 @@ const allowedOrigins = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
     "https://localhost",
-    "https://cims-j5ymndxri-cims3.vercel.app"
+    "https://cimsshared.vercel.app"
 ];
 
 app.use(cors({

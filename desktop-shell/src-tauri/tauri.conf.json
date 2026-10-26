@@ -11,7 +11,7 @@
 "windows": [
   {
     "title": "CIMS",
-    "url": "https://cims-j5ymndxri-cims3.vercel.app",
+    "url": "https://cimsshared.vercel.app",
     "width": 1280,
     "height": 800,
     "minWidth": 900,
