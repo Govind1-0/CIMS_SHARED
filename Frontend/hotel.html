@@ -211,7 +211,7 @@
       -webkit-tap-highlight-color: transparent;
       letter-spacing: .2px;
     }
-
+    
     .scan-cta:active { transform: scale(.98); opacity: .9; }
     .scan-cta-icon {
       width: 28px; height: 28px;
@@ -513,7 +513,7 @@
       table th,
       table td { padding: 10px 12px; }
     }
-
+  
     /* ---- product photos + details (hotel side) ---- */
     .cat-inline { display: none; }
     .inv-prod { display: flex; align-items: center; gap: 10px; }
@@ -527,7 +527,7 @@
     .pd-row span:first-child { color: var(--muted); }
     .pd-row span:last-child { font-weight: 600; text-align: right; }
     .pd-close { width: 100%; margin-top: 16px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); font-size: 14px; font-weight: 700; cursor: pointer; }
-
+  
     /* mobile width fix: keep wide tables inside the screen */
     .main { min-width: 0; }
     @media (max-width: 480px) {
@@ -683,6 +683,7 @@
     <div class="contact-arrow">&#8250;</div>
   </div>
 
+  
   <div class="contact-card" onclick="openWhatsApp()">
     <div class="contact-icon-wrap">&#9993;</div>
     <div class="contact-text">
@@ -692,6 +693,7 @@
     <div class="contact-arrow">&#8250;</div>
   </div>
 
+  
   <div class="contact-card" onclick="openReportModal()">
     <div class="contact-icon-wrap">&#9873;</div>
     <div class="contact-text">
@@ -815,7 +817,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const API     = "https://cims-backends.onrender.com/api";
+  const API     = "https://cims-ss3i.onrender.com/api";
   const token   = localStorage.getItem("cims_token");
   const user    = JSON.parse(localStorage.getItem("cims_user") || "{}");
   const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
@@ -871,11 +873,21 @@
   async function loadInventory() {
     const tbody = document.getElementById("inv-tbody");
     try {
-      const res  = await fetch(`${API}/inventory/hotel/${user.hotel_id}`, { headers });
-      const data = await res.json();
+      if (!user.hotel_id) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty">Your account is not linked to a hotel. Ask the admin to fix it.</td></tr>`;
+        return;
+      }
 
-      if (!data.success || !data.inventory.length) {
-        tbody.innerHTML = `<tr><td colspan="4" class="empty">No inventory assigned yet</td></tr>`;
+      const res  = await fetch(`${API}/inventory/hotel/${user.hotel_id}`, { headers });
+      const data = await res.json().catch(() => ({}));
+
+      // a failed request is not the same as "nothing assigned" - show the real reason
+      if (!res.ok || !data.success) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty">Could not load inventory: ${esc(data.message || "error " + res.status)}</td></tr>`;
+        return;
+      }
+      if (!data.inventory.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty">No inventory assigned to this hotel yet<br/><span style="font-size:11px">Hotel ID: ${esc(user.hotel_id)}</span></td></tr>`;
         return;
       }
 
@@ -1210,6 +1222,9 @@
 
   setInterval(loadAll, 60000);
 
+  const ADMIN_WHATSAPP = "917907356098"; 
+
+
 async function notifyAdmin() {
   const btn = document.getElementById("btn-notify");
   btn.style.opacity = "0.6";
@@ -1248,8 +1263,7 @@ function openWhatsApp() {
   const message = encodeURIComponent(
     `Need assistance — ${user.hotel_name} (Hotel ID: ${user.hotel_id})`
   );
-  const backendUrl = API.replace(/\/api\/?$/, "");
-  window.open(`${backendUrl}/contact/whatsapp?text=${message}`, "_blank", "noopener,noreferrer");
+  window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${message}`, "_blank");
 }
 
 

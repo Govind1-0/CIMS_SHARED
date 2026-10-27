@@ -73,7 +73,7 @@ router.post("/add", async (req, res) => {
       .single();
 
     if (existing) {
-      const { data: updated } = await supabase
+      const { data: updated, error: updErr } = await supabase
         .from("inventory")
         .update({
           quantity_assigned: existing.quantity_assigned + quantity,
@@ -83,6 +83,7 @@ router.post("/add", async (req, res) => {
         .eq("id", existing.id)
         .select()
         .single();
+      if (updErr) throw updErr;
 
       return res.status(200).json({
         success: true,
@@ -91,7 +92,7 @@ router.post("/add", async (req, res) => {
         action: "updated",
       });
     } else {
-      const { data: created } = await supabase
+      const { data: created, error: insErr } = await supabase
         .from("inventory")
         .insert({
           product_id,
@@ -103,6 +104,7 @@ router.post("/add", async (req, res) => {
         })
         .select()
         .single();
+      if (insErr) throw insErr;
 
       return res.status(201).json({
         success: true,
@@ -112,7 +114,8 @@ router.post("/add", async (req, res) => {
       });
     }
   } catch (err) {
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error(`[${new Date().toISOString()}] Inventory add error:`, err.message, err.code || "", err.details || "", err.hint || "");
+    return res.status(500).json({ success: false, message: "Could not assign stock." });
   }
 });
 
@@ -129,9 +132,11 @@ router.get("/hotel/:hotel_id", async (req, res) => {
 
     return res.status(200).json({ success: true, inventory });
   } catch (err) {
+    console.error(`[${new Date().toISOString()}] Hotel inventory error (hotel ${hotel_id}):`, err.message, err.code || "", err.details || "", err.hint || "");
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 router.get("/all", async (req, res) => {
   try {
@@ -143,6 +148,7 @@ router.get("/all", async (req, res) => {
     return res.json({ success: true, inventory: data || [] });
   } catch { return res.status(500).json({ success: false, message: "Server error" }); }
 });
+
 
 router.put("/:id", async (req, res) => {
   const { quantity_assigned, quantity_remaining, quantity_sold, reason } = req.body;
@@ -168,6 +174,7 @@ router.put("/:id", async (req, res) => {
     return res.json({ success: true, inventory: data, message: "Inventory updated successfully." });
   } catch { return res.status(500).json({ success: false, message: "Server error" }); }
 });
+
 
 router.delete("/:id", async (req, res) => {
   try {
