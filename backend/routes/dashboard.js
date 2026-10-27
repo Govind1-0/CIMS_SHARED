@@ -11,6 +11,11 @@ const { requireAuth } = require("../middleware/auth");
 router.use(requireAuth);
 
 const crypto = require("crypto");
+const OPEN_PAYMENT_STATUSES = ["pending", "partial", "overdue"];
+
+function sumPaymentAmounts(payments = []) {
+  return payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+}
 
 // ---- product images (Supabase Storage) ----
 const IMAGE_BUCKET    = "product-images";
@@ -80,12 +85,16 @@ router.get("/reports/sales", async (req, res) => {
 
 router.get("/reports/dues", async (req, res) => {
   try {
-    const { data: hotels } = await supabase.from("hotels").select("id, name");
+    const { data: hotels, error: hotelsError } = await supabase.from("hotels").select("id, name");
+    if (hotelsError) throw hotelsError;
+
     const dues = await Promise.all(hotels.map(async h => {
-      const { data: payments } = await supabase
+      const { data: payments, error } = await supabase
         .from("payments").select("amount")
-        .eq("hotel_id", h.id).in("status", ["pending", "partial"]);
-      const total = payments?.reduce((s, p) => s + Number(p.amount), 0) || 0;
+        .eq("hotel_id", h.id).in("status", OPEN_PAYMENT_STATUSES);
+      if (error) throw error;
+
+      const total = sumPaymentAmounts(payments);
       return { hotel_name: h.name, total };
     }));
     return res.json({ success: true, dues });
@@ -100,10 +109,11 @@ router.get("/stats", async (req, res) => {
       supabase.from("hotels").select("id", { count: "exact" }).eq("status", "active"),
       supabase.from("products").select("id", { count: "exact" }),
       supabase.from("sales").select("id", { count: "exact" }),
-      supabase.from("payments").select("amount").eq("status", "pending"),
+      supabase.from("payments").select("amount").in("status", OPEN_PAYMENT_STATUSES),
     ]);
 
-    const dues_pending = payments.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+    if (payments.error) throw payments.error;
+    const dues_pending = sumPaymentAmounts(payments.data);
 
     return res.json({
       success: true,
@@ -133,12 +143,13 @@ router.get("/hotels", async (req, res) => {
     const enriched = await Promise.all(hotels.map(async (h) => {
       const [inv, payments] = await Promise.all([
         supabase.from("inventory").select("quantity_remaining, quantity_sold").eq("hotel_id", h.id),
-        supabase.from("payments").select("amount").eq("hotel_id", h.id).eq("status", "pending"),
+        supabase.from("payments").select("amount").eq("hotel_id", h.id).in("status", OPEN_PAYMENT_STATUSES),
       ]);
 
+      if (payments.error) throw payments.error;
       const stock = inv.data?.reduce((s, i) => s + i.quantity_remaining, 0) || 0;
       const sold  = inv.data?.reduce((s, i) => s + i.quantity_sold, 0)      || 0;
-      const dues  = payments.data?.reduce((s, p) => s + Number(p.amount), 0) || 0;
+      const dues  = sumPaymentAmounts(payments.data);
 
       return { ...h, stock, sold, dues };
     }));
@@ -272,11 +283,12 @@ router.get("/hotel/stats", async (req, res) => {
       supabase.from("inventory").select("quantity_remaining").eq("hotel_id", hotel_id),
       supabase.from("sales").select("id", { count: "exact" }).eq("hotel_id", hotel_id).gte("sold_at", today.toISOString()),
       supabase.from("sales").select("id", { count: "exact" }).eq("hotel_id", hotel_id).gte("sold_at", monthStart.toISOString()),
-      supabase.from("payments").select("amount").eq("hotel_id", hotel_id).eq("status", "pending"),
+      supabase.from("payments").select("amount").eq("hotel_id", hotel_id).in("status", OPEN_PAYMENT_STATUSES),
     ]);
 
+    if (payments.error) throw payments.error;
     const stock = inv.data?.reduce((s, i) => s + i.quantity_remaining, 0) || 0;
-    const dues  = payments.data?.reduce((s, p) => s + Number(p.amount), 0) || 0;
+    const dues  = sumPaymentAmounts(payments.data);
 
     return res.json({
       success: true,
@@ -319,7 +331,7 @@ router.get("/payments/hotel/:hotel_id", async (req, res) => {
       .from("payments")
       .select("*")
       .eq("hotel_id", hotel_id)
-      .in("status", ["pending", "partial"])
+      .in("status", OPEN_PAYMENT_STATUSES)
       .order("due_date", { ascending: true });
 
     if (error) throw error;

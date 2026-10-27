@@ -751,7 +751,7 @@
       document.getElementById("stat-hotels").textContent       = s.hotels       ?? "—";
       document.getElementById("stat-products").textContent     = s.products      ?? "—";
       document.getElementById("stat-sales").textContent        = s.sales_month   ?? "—";
-      document.getElementById("stat-dues").textContent         = s.dues_pending ? `₹${(s.dues_pending/1000).toFixed(0)}K` : "₹0";
+      document.getElementById("stat-dues").textContent         = `₹${Number(s.dues_pending || 0).toLocaleString("en-IN")}`;
       document.getElementById("stat-hotels-delta").textContent = `${s.hotels} total active`;
       document.getElementById("stat-products-delta").textContent = `${s.products} registered`;
       document.getElementById("stat-sales-delta").textContent  = `This month`;
@@ -850,7 +850,7 @@
               <div class="hotel-stat-lbl">Sold</div>
             </div>
             <div class="hotel-stat">
-              <div class="hotel-stat-val" style="color:#e07b73">₹${((h.dues ?? 0)/1000).toFixed(0)}K</div>
+              <div class="hotel-stat-val" style="color:#e07b73">₹${Number(h.dues ?? 0).toLocaleString("en-IN")}</div>
               <div class="hotel-stat-lbl">Dues</div>
             </div>
           </div>

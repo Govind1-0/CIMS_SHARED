@@ -675,8 +675,7 @@
     document.getElementById("stat-total").textContent   = hotels.length;
     document.getElementById("stat-active").textContent  = active;
     document.getElementById("stat-inactive").textContent = inactive;
-    document.getElementById("stat-dues").textContent    = dues
-      ? `\u20B9${(dues / 1000).toFixed(0)}K` : "\u20B90";
+    document.getElementById("stat-dues").textContent    = `\u20B9${dues.toLocaleString("en-IN")}`;
   }
 
   function renderTable(hotels) {

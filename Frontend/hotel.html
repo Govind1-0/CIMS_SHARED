@@ -889,8 +889,7 @@
       document.getElementById("stat-stock").textContent = data.stats.stock ?? "0";
       document.getElementById("stat-today").textContent = data.stats.today ?? "0";
       document.getElementById("stat-month").textContent = data.stats.month ?? "0";
-      document.getElementById("stat-dues").textContent  = data.stats.dues
-        ? `\u20B9${(data.stats.dues / 1000).toFixed(0)}K` : "\u20B90";
+      document.getElementById("stat-dues").textContent  = `\u20B9${Number(data.stats.dues || 0).toLocaleString("en-IN")}`;
     } catch {}
   }
 
