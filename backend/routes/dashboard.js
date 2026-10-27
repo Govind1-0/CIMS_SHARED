@@ -13,6 +13,9 @@ router.use(requireAuth);
 const crypto = require("crypto");
 const OPEN_PAYMENT_STATUSES = ["pending", "partial", "overdue"];
 
+// A due created automatically for a sale must be paid within this many days
+const AUTO_DUE_DAYS = 15;
+
 function sumPaymentAmounts(payments = []) {
   return payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
 }
@@ -563,6 +566,27 @@ router.post("/sales/record", async (req, res) => {
       .single();
 
     if (saleError) throw saleError;
+
+    // ---- auto-create a due for this sale ----
+    // The hotel owes the supply price (cost_price x quantity) and has AUTO_DUE_DAYS days to pay.
+    // A failure here must not undo the sale (stock + sale row are already saved), so just log it.
+    const dueAmount = Math.round(quantity * cost_price * 100) / 100;
+    const dueDate   = new Date(Date.now() + AUTO_DUE_DAYS * 24 * 60 * 60 * 1000)
+                        .toISOString().slice(0, 10);           // YYYY-MM-DD
+
+    const { error: dueError } = await supabase
+      .from("payments")
+      .insert({
+        hotel_id,
+        amount:   dueAmount,
+        status:   "pending",
+        due_date: dueDate,
+        notes:    `Sale: ${product.name} x${quantity}`,
+      });
+
+    if (dueError) {
+      console.error(`[${new Date().toISOString()}] Auto-due error:`, dueError.message);
+    }
 
     
     await supabase.from("notifications").insert({
