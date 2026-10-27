@@ -540,6 +540,18 @@
       .cat-inline { display: inline; }
     }
       .pd-sheet { background: #110d41; }
+  
+    /* ---- margin box in the product popup ---- */
+    .pd-margin { margin: 14px 0 4px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,.03); }
+    .pd-margin-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 10px; }
+    .pd-margin-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .pd-margin-row input { width: 90px; padding: 9px 10px; background: rgba(255,255,255,.06); border: 1.5px solid var(--border); border-radius: 9px; color: var(--text); font-size: 15px; outline: none; }
+    .pd-margin-row input:focus { border-color: var(--accent); }
+    .pd-save { margin-left: auto; padding: 9px 18px; border: none; border-radius: 9px; background: linear-gradient(135deg, var(--accent), var(--accent-dk)); color: #0b0728; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .pd-save:disabled { opacity: .5; cursor: not-allowed; }
+    .pd-sell { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; color: var(--muted); }
+    .pd-sell.total { color: var(--text); font-size: 16px; font-weight: 700; border-top: 1px solid var(--border); margin-top: 4px; padding-top: 10px; }
+    .pd-sell.total span:last-child { color: var(--accent); }
   </style>
 </head>
 <body>
@@ -810,6 +822,17 @@
     <div class="pd-img-wrap" id="pd-img-wrap">No photo</div>
     <div class="pd-desc" id="pd-desc"></div>
     <div id="pd-rows"></div>
+    <div class="pd-margin">
+      <div class="pd-margin-title">Your selling price</div>
+      <div class="pd-margin-row">
+        <input type="number" id="pd-margin" min="0" max="500" step="0.5" inputmode="decimal" oninput="updateSellPreview()"/>
+        <span>% margin</span>
+        <button class="pd-save" id="pd-save" onclick="saveMargin()">Save</button>
+      </div>
+      <div class="pd-sell"><span>Cost price</span><span id="pd-cost"></span></div>
+      <div class="pd-sell"><span>Profit per unit</span><span id="pd-profit"></span></div>
+      <div class="pd-sell total"><span>Selling price</span><span id="pd-sell"></span></div>
+    </div>
     <button class="pd-close" onclick="closeProduct()">Close</button>
   </div>
 </div>
@@ -823,6 +846,7 @@
   const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
 
   let invItems       = [];
+  let pdIdx          = null;
   let scannedProduct = null;
   let saleQty        = 1;
   let toastTimer;
@@ -1093,7 +1117,9 @@
     document.getElementById("confirm-card").classList.add("visible");
     document.getElementById("confirm-name").textContent  = p.name;
     document.getElementById("confirm-meta").textContent  = `${p.origin_country} \u00B7 ${p.category}`;
-    document.getElementById("confirm-price").textContent = `\u20B9${Number(p.unit_price).toLocaleString()} per unit`;
+    const stock = invItems.find(i => i.product_id === p.id);
+    const price = stock ? sellPrice(p.unit_price, stock.margin_percent) : Number(p.unit_price);
+    document.getElementById("confirm-price").textContent = `${fmtMoney(price)} per unit`;
     document.getElementById("confirm-img").src = p.image_url || "https://placehold.co/52x52?text=Item";
     saleQty = 1;
     document.getElementById("qty-display").textContent = 1;
@@ -1123,7 +1149,6 @@
           product_id:  scannedProduct.id,
           hotel_id:    user.hotel_id,
           quantity:    saleQty,
-          sale_price:  scannedProduct.unit_price,
           recorded_by: user.id,
         }),
       });
@@ -1188,13 +1213,60 @@
       ["Category", p.category],
       ["Origin",   p.origin_country],
       ["SKU",      p.sku],
-      ["Price",    p.unit_price ? "\u20B9" + Number(p.unit_price).toLocaleString("en-IN") : ""],
       ["In stock", item.quantity_remaining != null ? item.quantity_remaining + " units" : ""],
     ].filter(r => r[1]);
     document.getElementById("pd-rows").innerHTML = rows
       .map(r => `<div class="pd-row"><span>${esc(r[0])}</span><span>${esc(r[1])}</span></div>`).join("");
 
+    pdIdx = idx;
+    document.getElementById("pd-margin").value = Number(item.margin_percent) || 0;
+    updateSellPreview();
+
     document.getElementById("product-modal").classList.add("visible");
+  }
+
+  // ---------- margin ----------
+  function fmtMoney(n) {
+    return "\u20B9" + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  }
+  function sellPrice(cost, margin) {
+    return Math.round(Number(cost || 0) * (1 + (Number(margin) || 0) / 100) * 100) / 100;
+  }
+
+  function updateSellPreview() {
+    const item = invItems[pdIdx];
+    if (!item || !item.products) return;
+    const cost   = Number(item.products.unit_price) || 0;
+    const margin = parseFloat(document.getElementById("pd-margin").value) || 0;
+    const sell   = sellPrice(cost, margin);
+    document.getElementById("pd-cost").textContent   = fmtMoney(cost);
+    document.getElementById("pd-profit").textContent = fmtMoney(sell - cost);
+    document.getElementById("pd-sell").textContent   = fmtMoney(sell);
+  }
+
+  async function saveMargin() {
+    const item = invItems[pdIdx];
+    if (!item) return;
+    const margin = parseFloat(document.getElementById("pd-margin").value);
+    if (!Number.isFinite(margin) || margin < 0 || margin > 500) {
+      return showToast("Enter a margin between 0 and 500", "error");
+    }
+    const btn = document.getElementById("pd-save");
+    btn.disabled = true;
+    try {
+      const res  = await fetch(`${API}/inventory/${item.id}/margin`, {
+        method: "PUT", headers, body: JSON.stringify({ margin_percent: margin }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.message || "Could not save margin");
+      item.margin_percent = margin;
+      updateSellPreview();
+      showToast("Margin saved", "success");
+    } catch (err) {
+      showToast(err.message || "Could not save margin", "error");
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   function closeProduct() {

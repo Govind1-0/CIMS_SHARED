@@ -474,9 +474,9 @@ router.post("/sales/record", async (req, res) => {
       return res.status(404).json({ success: false, message: "Product not found." });
     }
 
-    const sale_price = product.unit_price;
+    const cost_price = product.unit_price;          // what the hotel pays (supply price)
 
-    if (!sale_price || sale_price <= 0) {
+    if (!cost_price || cost_price <= 0) {
       return res.status(400).json({ success: false, message: "Product has no valid price set." });
     }
 
@@ -496,6 +496,10 @@ router.post("/sales/record", async (req, res) => {
     if (invError || !inv) {
       return res.status(404).json({ success: false, message: "This product is not assigned to this hotel." });
     }
+
+    // selling price = supply price + the hotel's own margin (computed here, never trusted from the client)
+    const margin     = Number(inv.margin_percent) || 0;
+    const sale_price = Math.round(cost_price * (1 + margin / 100) * 100) / 100;
 
     
     if (inv.quantity_remaining < quantity) {
@@ -539,7 +543,8 @@ router.post("/sales/record", async (req, res) => {
         recorded_by:   recorded_by || null,
         quantity_sold: quantity,
         sale_price,
-        total_amount:  quantity * sale_price,
+        cost_price,
+        total_amount:  Math.round(quantity * sale_price * 100) / 100,
         sold_at:       new Date().toISOString(),
       })
       .select()

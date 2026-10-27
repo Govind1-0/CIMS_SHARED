@@ -160,6 +160,38 @@ router.get("/all", async (req, res) => {
 });
 
 
+// Hotel sets its own margin (%) on top of the supply price. Admin may set it too.
+router.put("/:id/margin", async (req, res) => {
+  const margin = Number(req.body?.margin_percent);
+  if (!Number.isFinite(margin) || margin < 0 || margin > 500) {
+    return res.status(400).json({ success: false, message: "Margin must be between 0 and 500 percent." });
+  }
+  const margin_percent = Math.round(margin * 100) / 100;
+
+  try {
+    const { data: inv } = await supabase
+      .from("inventory").select("id, hotel_id").eq("id", req.params.id).single();
+    if (!inv) return res.status(404).json({ success: false, message: "Stock record not found." });
+
+    if (req.user.role === "hotel_staff" && inv.hotel_id !== req.user.hotel_id) {
+      return res.status(403).json({ success: false, message: "Access denied." });
+    }
+
+    const { data, error } = await supabase
+      .from("inventory")
+      .update({ margin_percent })
+      .eq("id", req.params.id)
+      .select("*, products(name, unit_price)")
+      .single();
+    if (error) throw error;
+
+    return res.json({ success: true, message: "Margin saved.", inventory: data });
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Margin update error:`, err.message, err.code || "");
+    return res.status(500).json({ success: false, message: "Could not save margin." });
+  }
+});
+
 router.put("/:id", async (req, res) => {
   const { quantity_assigned, quantity_remaining, quantity_sold, reason } = req.body;
   if (quantity_assigned === undefined || quantity_remaining === undefined || quantity_sold === undefined) {

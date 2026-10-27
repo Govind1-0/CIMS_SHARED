@@ -705,7 +705,7 @@
         <td class="qty-cell">&times;${esc(s.quantity_sold)}</td>
         <td>
           <div class="sale-amount">${money(s.total_amount)}</div>
-          <div class="pay-sub">${money(s.sale_price)} each</div>
+          <div class="pay-sub">${money(s.sale_price)} each${s.cost_price && Number(s.cost_price) !== Number(s.sale_price) ? ` &middot; cost ${money(s.cost_price)}` : ""}</div>
         </td>
         <td class="sale-when">${esc(fmtWhen(s.sold_at))}</td>
       </tr>`).join("");
