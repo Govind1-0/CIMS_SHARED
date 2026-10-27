@@ -10,8 +10,18 @@ const supabase = createClient(
 const { requireAuth } = require("../middleware/auth");
 router.use(requireAuth);
 
+// Hotel staff can only touch their own hotel.
+// (Express 5: req.body is undefined on GET requests, and req.params is not
+//  filled in at router level - so check the :hotel_id param and the body safely.)
+router.param("hotel_id", (req, res, next, value) => {
+  if (req.user.role === "hotel_staff" && value !== req.user.hotel_id) {
+    return res.status(403).json({ success: false, message: "Access denied." });
+  }
+  next();
+});
+
 router.use((req, res, next) => {
-  const hotel_id = req.params.hotel_id || req.body.hotel_id;
+  const hotel_id = req.body?.hotel_id;
 
   if (req.user.role === "hotel_staff" && hotel_id && hotel_id !== req.user.hotel_id) {
     return res.status(403).json({
