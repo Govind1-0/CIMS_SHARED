@@ -515,7 +515,7 @@
     <div class="stats-row">
       <div class="stat-mini teal">
         <div class="stat-mini-val" id="stat-revenue">—</div>
-        <div class="stat-mini-lbl">Revenue</div>
+        <div class="stat-mini-lbl" title="Product price multiplied by quantity, excluding hotel margin">Product revenue</div>
       </div>
       <div class="stat-mini purple">
         <div class="stat-mini-val" id="stat-units">—</div>
@@ -527,7 +527,7 @@
       </div>
       <div class="stat-mini coral">
         <div class="stat-mini-val" id="stat-avg">—</div>
-        <div class="stat-mini-lbl">Avg. sale</div>
+        <div class="stat-mini-lbl">Avg. product revenue</div>
       </div>
     </div>
 
@@ -604,6 +604,12 @@
       { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
   function money(n) { return "\u20B9" + Number(n || 0).toLocaleString("en-IN"); }
+  function productRevenue(sale) {
+    const unitPrice = Number(sale.cost_price ?? sale.products?.unit_price);
+    const quantity = Number(sale.quantity_sold);
+    if (!Number.isFinite(unitPrice) || !Number.isFinite(quantity)) return 0;
+    return Math.round(unitPrice * quantity * 100) / 100;
+  }
   function ymd(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   }
@@ -677,7 +683,7 @@
   }
 
   function renderStats() {
-    const revenue = filtered.reduce((s, x) => s + (Number(x.total_amount) || 0), 0);
+    const revenue = filtered.reduce((sum, sale) => sum + productRevenue(sale), 0);
     const units   = filtered.reduce((s, x) => s + (Number(x.quantity_sold) || 0), 0);
     const count   = filtered.length;
     document.getElementById("stat-revenue").textContent = money(revenue);

@@ -66,7 +66,7 @@ router.get("/reports/sales", async (req, res) => {
   try {
     let query = supabase
       .from("sales")
-      .select("*, products(name), hotels(name)")
+      .select("*, products(name, unit_price), hotels(name)")
       .gte("sold_at", since.toISOString())
       .order("sold_at", { ascending: false });
 
