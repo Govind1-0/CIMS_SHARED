@@ -24,12 +24,14 @@ app.use(cors({
     "http://localhost",
     "https://localhost",
     "capacitor://localhost",
+    "https://cims-j5ymndxri-cims3.vercel.app",
     "https://cimsshared.vercel.app"
   ],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
+// product photo upload: admin only, larger body limit just for this one path
 app.use("/api/products/upload", requireAdmin, express.json({ limit: "1mb" }));
 
 app.use(express.json({ limit: "10kb" }));
@@ -59,16 +61,6 @@ app.get("/", (req, res) => {
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
-});
-
-app.get("/contact/whatsapp", (req, res) => {
-  const phone = String(process.env.ADMIN_WHATSAPP || "").replace(/\D/g, "");
-  if (phone.length < 8 || phone.length > 15) {
-    return res.status(503).send("WhatsApp contact is not configured.");
-  }
-
-  const message = String(req.query.text || "").slice(0, 500);
-  return res.redirect(302, `https://wa.me/${phone}?text=${encodeURIComponent(message)}`);
 });
 
 app.use((err, req, res, next) => {

@@ -1,4 +1,3 @@
-
 const express = require("express");
 const router  = express.Router();
 const bwipjs  = require("bwip-js");
@@ -104,7 +103,7 @@ router.get("/all", async (req, res) => {
 
     const withBarcodes = products.map(p => ({
       ...p,
-      barcode_image_url: `https://cims-backends.onrender.com/api/barcode/generate/${encodeURIComponent(p.barcode)}`,
+      barcode_image_url: `https://cims-backends.onrender.com/api/barcode/generate/${p.barcode}`,
     }));
 
     return res.status(200).json({
